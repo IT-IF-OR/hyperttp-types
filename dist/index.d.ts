@@ -1,6 +1,5 @@
 export type * from "./core.js";
-export { HttpClientError, TimeoutError, RateLimitError } from "./errors.js";
-export type { HyperttpError } from "./errors.js";
+export type * from "./errors.js";
 export type * from "./http.js";
 export type * from "./hyper.js";
 export type * from "./metrics.js";
