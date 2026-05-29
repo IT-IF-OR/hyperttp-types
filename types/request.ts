@@ -1,126 +1,152 @@
-/**
- * @ru Представляет HTTP заголовки запроса
- * @en Represents HTTP request headers
- */
-export type RequestHeaders = Record<string, string>;
+import type {
+  Method,
+  ResponseType,
+  RequestHeaders,
+  RequestQuery,
+  RequestBodyData,
+} from "./http.js";
 
 /**
- * @ru Представляет параметры URL query
- * @en Represents URL query parameters
+ * @en Configuration object for constructing a low-level HTTP request.
+ * @ru Конфигурационный объект для построения низкоуровневого HTTP-запроса.
  */
-export type RequestQuery = Record<
-  string,
-  string | string[] | number | boolean | undefined | null
->;
-
-/**
- * @ru Данные тела запроса
- * @en Request body data
- */
-export type RequestBodyData = any | null | undefined;
-
-/**
- * @ru Конфигурация для создания запроса
- * @en Configuration for request creation
- */
-export type RequestConfig = {
+export interface RequestConfig {
   /**
-   * @ru Схема протокола (http/https)
-   * @en Protocol scheme (http/https)
+   * @en URL scheme (e.g., 'http', 'https').
+   * @ru Схема URL (например, 'http', 'https').
    */
   scheme: string;
+
   /**
-   * @ru Хост сервера
-   * @en Server host
+   * @en Target hostname or IP address.
+   * @ru Целевое имя хоста или IP-адрес.
    */
   host: string;
+
   /**
-   * @ru Порт сервера
-   * @en Server port
+   * @en Target port number.
+   * @ru Номер целевого порта.
    */
   port?: number;
+
   /**
-   * @ru Путь ресурса
-   * @en Resource path
+   * @en URL path string.
+   * @ru Строка пути URL.
    */
   path?: string;
+
   /**
-   * @ru Заголовки запроса
-   * @en Request headers
+   * @en Dictionary of request headers.
+   * @ru Словарь заголовков запроса.
    */
   headers?: RequestHeaders;
+
   /**
-   * @ru Параметры query строки
-   * @en Query string parameters
+   * @en URL query parameters map.
+   * @ru Карта параметров query строки URL.
    */
   query?: RequestQuery;
+
   /**
-   * @ru Данные тела запроса
-   * @en Request body data
+   * @en Request body payload data.
+   * @ru Данные полезной нагрузки тела запроса.
    */
   bodyData?: RequestBodyData;
-};
+}
 
 /**
- * @ru Основной интерфейс запроса (Оптимизирован под плоские объекты и скрытые классы V8)
- * @en Main request interface (Optimized for flat objects and V8 hidden classes)
+ * @en High-level interface representing a prepared HTTP request.
+ * @ru Высокоуровневый интерфейс, представляющий подготовленный HTTP-запрос.
  */
 export interface RequestInterface {
   /**
-   * @ru Полный URL запроса
-   * @en Full request URL
+   * @en Full target URL string.
+   * @ru Полная строка целевого URL.
    */
   url: string;
 
   /**
-   * @ru Заголовки запроса
-   * @en Request headers
+   * @en Dictionary of request headers.
+   * @ru Словарь заголовков запроса.
    */
   headers: RequestHeaders;
 
   /**
-   * @ru Данные тела запроса
-   * @en Request body data
+   * @en Request body payload data.
+   * @ru Данные полезной нагрузки тела запроса.
    */
   body?: RequestBodyData;
 
   /**
-   * @ru Параметры query строки
-   * @en Query parameters
+   * @en URL query parameters map.
+   * @ru Карта параметров query строки URL.
    */
   query?: RequestQuery;
 
   /**
-   * @ru AbortSignal для отмены запроса
-   * @en AbortSignal for cancellation
+   * @en Abort signal for cancelling the request.
+   * @ru Сигнал прерывания для отмены запроса.
    */
   signal?: AbortSignal;
 
   /**
-   * @ru Метаданные запроса (responseType, внутренние флаги плагинов)
-   * @en Request metadata (responseType, internal plugin flags)
+   * @en Custom metadata dictionary for extended context.
+   * @ru Словарь пользовательских метаданных для расширенного контекста.
    */
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
 }
 
 /**
- * @ru Метаданные для конвертации ответа
- * @en Response conversion metadata
+ * @en Internal normalized representation of an HTTP request used by the core pipeline.
+ * @ru Внутреннее нормализованное представление HTTP-запроса, используемое ядром конвейера.
  */
-export interface ConversionMeta {
+export interface InternalRequest {
   /**
-   * @ru Content-Type заголовок
-   * @en Content-Type header
+   * @en HTTP method (GET, POST, etc.).
+   * @ru HTTP-метод (GET, POST и т.д.).
    */
-  contentType?: string;
+  method: Method;
+
   /**
-   * @ru Content-Encoding заголовок
-   * @en Content-Encoding header
+   * @en Full target URL string.
+   * @ru Полная строка целевого URL.
    */
-  contentEncoding?: string;
+  url: string;
+
   /**
-   * @ru URL запроса
-   * @en Request URL
+   * @en Dictionary of request headers.
+   * @ru Словарь заголовков запроса.
    */
-  url?: string;
+  headers: RequestHeaders;
+
+  /**
+   * @en Request body payload data.
+   * @ru Данные полезной нагрузки тела запроса.
+   */
+  body?: RequestBodyData;
+
+  /**
+   * @en Abort signal for cancelling the request.
+   * @ru Сигнал прерывания для отмены запроса.
+   */
+  signal?: AbortSignal;
+
+  /**
+   * @en Infrastructure metadata for timing and response type configuration.
+   * @ru Инфраструктурные метаданные для конфигурации таймингов и типа ответа.
+   */
+  meta?: {
+    timings?: {
+      /**
+       * @en Time spent on network operations in milliseconds.
+       * @ru Время, затраченное на сетевые операции, в миллисекундах.
+       */
+      networkMs?: number;
+    };
+    /**
+     * @en Expected response parsing strategy.
+     * @ru Ожидаемая стратегия парсинга ответа.
+     */
+    responseType?: ResponseType;
+  };
 }

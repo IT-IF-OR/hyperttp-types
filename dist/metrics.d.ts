@@ -1,87 +1,123 @@
-import type { HyperPlugin } from "./plugins.js";
+import type { HyperPlugin } from "./plugin.js";
 /**
- * @ru Метрики и аналитические показатели производительности выполнения конкретного HTTP-запроса.
- * @en Analytical metrics and performance benchmarks collected during a specific HTTP request execution.
+ * @en Realtime statistics, core runtime performance metrics, and orchestrator queue logs container.
+ * @ru Объект метрик, внутренней статистики производительности ядра и логов состояния очередей.
+ */
+export interface HyperStats {
+    /**
+     * @en Current number of concurrent in-flight requests running.
+     * @ru Текущее количество активных сетевых запросов в полете.
+     */
+    inflightRequests?: number;
+    /**
+     * @en Current size or absolute entry count stored within the cache layout layer.
+     * @ru Текущий объем или количество записей в оперативной памяти кэша.
+     */
+    cacheSize?: number;
+    /**
+     * @en Number of tasks deferred, waiting inside the scheduler execution queue.
+     * @ru Количество запросов, находящихся в очереди на отправку.
+     */
+    queuedRequests?: number;
+    /**
+     * @en Current operational weight or thread count of the active processing workers.
+     * @ru Количество активных очередей или параллельных воркеров обработки.
+     */
+    activeQueue?: number;
+    /**
+     * @en Total count of rate limiter restriction breaches encountered.
+     * @ru Суммарное количество срабатываний лимитера частоты запросов.
+     */
+    rateLimitHits?: number;
+    /**
+     * @en Arbitrary extension dynamic keys and variables applied by custom user modules.
+     * @ru Любые динамические кастомные метрики, добавляемые плагинами пользователя.
+     */
+    [key: string]: unknown;
+}
+/**
+ * @en Detailed performance metrics and lifecycle data for a single HTTP request.
+ * @ru Детальные метрики производительности и данные жизненного цикла для одного HTTP-запроса.
  */
 export interface RequestMetrics {
     /**
-     * @ru Временная метка начала выполнения запроса (Unix timestamp в миллисекундах).
-     * @en Request execution start timestamp in milliseconds.
+     * @en Timestamp marking the initiation of the request process.
+     * @ru Временная метка начала процесса запроса.
      */
     startTime: number;
     /**
-     * @ru Временная метка завершения выполнения запроса (Unix timestamp в миллисекундах).
-     * @en Request execution completion timestamp in milliseconds.
+     * @en Timestamp marking the completion of the request process.
+     * @ru Временная метка завершения процесса запроса.
      */
     endTime: number;
     /**
-     * @ru Суммарная длительность выполнения полного цикла запроса в миллисекундах.
-     * @en Total execution duration of the request loop in milliseconds.
+     * @en Total elapsed time for the request in milliseconds.
+     * @ru Общее затраченное время на запрос в миллисекундах.
      */
     duration: number;
     /**
-     * @ru Полученный HTTP-статус код ответа сервера (если ответ был успешно доставлен).
-     * @en Resolved HTTP response status code (if available).
+     * @en HTTP status code returned by the server, if available.
+     * @ru HTTP-код статуса, возвращенный сервером, если доступен.
      */
     statusCode?: number;
     /**
-     * @ru Количество байт, полученных от удаленного сервера (размер тела ответа и метаданных).
-     * @en Total count of bytes downloaded from the remote server.
+     * @en Total number of bytes received in the response body.
+     * @ru Общее количество байт, полученных в теле ответа.
      */
     bytesReceived: number;
     /**
-     * @ru Количество байт, отправленных на удаленный сервер (размер тела запроса и заголовков).
-     * @en Total count of bytes uploaded to the remote server.
+     * @en Total number of bytes sent in the request body.
+     * @ru Общее количество байт, отправленных в теле запроса.
      */
     bytesSent: number;
     /**
-     * @ru Количество выполненных повторных попыток отправки при сбоях.
-     * @en Number of request transmission retries performed.
+     * @en Number of retry attempts performed for this request.
+     * @ru Количество попыток повторения, выполненных для этого запроса.
      */
     retries: number;
     /**
-     * @ru Флаг, указывающий, был ли ответ отдан из локального кэша без похода в сеть.
-     * @en Indicator showing if the response payload was served directly from the cache.
+     * @en Indicates whether the response was served from cache.
+     * @ru Указывает, был ли ответ получен из кэша.
      */
     cached: boolean;
     /**
-     * @ru Целевой URL-адрес, на который был отправлен запрос.
-     * @en Targeted destination URL address string.
+     * @en The target URL of the request.
+     * @ru Целевой URL запроса.
      */
     url: string;
     /**
-     * @ru HTTP-метод, использованный при выполнении данной операции.
-     * @en HTTP method verb utilized for this execution.
+     * @en The HTTP method used for the request.
+     * @ru HTTP-метод, использованный для запроса.
      */
     method: string;
     /**
-     * @ru Хэш-сумма тела запроса, используемая механизмами кэширования и дедупликации.
-     * @en Calculated request payload body hash string utilized for cache matching.
+     * @en Optional hash identifier of the request body for integrity or caching checks.
+     * @ru Опциональный хеш-идентификатор тела запроса для проверки целостности или кэширования.
      */
     bodyHash?: string;
     /**
-     * @ru Карта плагинов, которые были задействованы в конвейере обработки этого запроса.
-     * @en Map container of plugins engaged during this specific request lifecycle.
+     * @en Map of plugins involved in processing this request.
+     * @ru Карта плагинов, участвовавших в обработке этого запроса.
      */
     plugins?: Map<string, HyperPlugin>;
     /**
-     * @ru Детализированные тайминги прохождения изолированных внутренних фаз обработки.
-     * @en Detailed duration benchmarks across isolated processing pipeline stages.
+     * @en Breakdown of time spent in specific processing stages.
+     * @ru Разбивка времени, затраченного на определенные этапы обработки.
      */
     stages?: {
         /**
-         * @ru Время, затраченное на сериализацию и подготовку тела запроса в миллисекундах.
-         * @en Duration of the request body payload serialization phase in milliseconds.
+         * @en Time spent serializing the request payload.
+         * @ru Время, затраченное на сериализацию полезной нагрузки запроса.
          */
         serializationMs?: number;
         /**
-         * @ru Чистое время выполнения сетевого ввода-вывода (I/O) на уровне транспорта.
-         * @en Pure network I/O execution duration in milliseconds.
+         * @en Time spent on network transmission (DNS, TCP, TLS, TTFB).
+         * @ru Время, затраченное на сетевую передачу (DNS, TCP, TLS, TTFB).
          */
         networkMs?: number;
         /**
-         * @ru Время, затраченное на парсинг, декомпрессию и десериализацию ответа в миллисекундах.
-         * @en Duration of the incoming response parsing and structure mapping phase in milliseconds.
+         * @en Time spent parsing the response body.
+         * @ru Время, затраченное на парсинг тела ответа.
          */
         parsingMs?: number;
     };

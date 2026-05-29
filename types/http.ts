@@ -1,38 +1,62 @@
 /**
- * @ru Уровни логирования для фильтрации и управления выводом диагностических сообщений клиента.
- * @en Log levels for filtering and controlling client diagnostic output messages.
- */
-export type LogLevel = "debug" | "info" | "warn" | "error";
-
-/**
- * @ru Поддерживаемые HTTP-методы (глаголы) для выполнения сетевых запросов.
- * @en Supported HTTP method verbs for executing network requests.
+ * @en Valid HTTP methods.
+ * @ru Допустимые HTTP-методы.
  */
 export type Method =
   | "GET"
   | "POST"
   | "PUT"
   | "PATCH"
-  | "OPTIONS"
   | "DELETE"
+  | "OPTIONS"
   | "HEAD";
 
 /**
- * @ru Ожидаемый формат автоматического или принудительного парсинга входящего тела ответа.
- * @en Expected format for automatic or forced parsing of the incoming response body payload.
+ * @en Expected response body parsing types.
+ * @ru Допустимые стратегии автоматического парсинга ответа.
  */
 export type ResponseType =
   | "auto"
   | "json"
   | "text"
   | "xml"
-  | "html"
-  | "buffer"
   | "stream"
-  | "blob";
+  | "blob"
+  | "html"
+  | "buffer";
 
 /**
- * @ru Тип исходного формата сырых данных, используемый для сериализации или контент-анализа.
- * @en Source data format type used for payload serialization or content analysis.
+ * @en Logger urgency levels for the core internal logger.
+ * @ru Уровни логирования для внутреннего логгера ядра.
  */
-export type SourceType = "json" | "xml" | "html" | "text" | "buffer";
+export type LogLevel = "debug" | "info" | "warn" | "error";
+
+/**
+ * @en Request HTTP headers dictionary map.
+ * @ru Словарь HTTP-заголовков запроса.
+ */
+export type RequestHeaders = Record<string, string | string[]>;
+
+/**
+ * @en URL query string parameters map.
+ * @ru Параметры URL query строки.
+ */
+export type RequestQuery = Record<
+  string,
+  string | string[] | number | boolean | undefined | null
+>;
+
+/**
+ * @en Allowed request body data types.
+ * @ru Тип допустимых данных для тела запроса.
+ */
+export type RequestBodyData =
+  | string
+  | Buffer
+  | Uint8Array
+  | ReadableStream
+  | URLSearchParams
+  | FormData
+  | null
+  | undefined
+  | unknown;

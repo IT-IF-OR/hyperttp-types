@@ -1,31 +1,35 @@
+/**
+ * @en Configuration options for automatic request retry logic.
+ * @ru Конфигурационные опции для логики автоматического повторения запросов.
+ */
 export interface RetryOptions {
   /**
-   * @ru Максимальное количество повторных попыток
-   * @en Maximum number of retry attempts
+   * @en Maximum number of retry attempts.
+   * @ru Максимальное количество повторных попыток.
    */
   maxRetries?: number;
 
   /**
-   * @ru Базовая задержка между попытками (мс)
-   * @en Base delay between retries (ms)
+   * @en Base delay between retries in milliseconds.
+   * @ru Базовая задержка между попытками (мс).
    */
   baseDelay?: number;
 
   /**
-   * @ru Максимальная задержка между попытками (мс)
-   * @en Maximum retry delay (ms)
+   * @en Maximum delay cap between retries in milliseconds.
+   * @ru Максимальная задержка между попытками (мс).
    */
   maxDelay?: number;
 
   /**
-   * @ru Коды HTTP, при которых выполняется retry
-   * @en HTTP status codes that trigger retry logic
+   * @en List of HTTP status codes that should trigger a retry.
+   * @ru Коды HTTP, при которых выполняется retry.
    */
   retryStatusCodes?: readonly number[];
 
   /**
-   * @ru Добавлять случайный jitter к задержке
-   * @en Add randomness (jitter) to retry delay
+   * @en Enable random jitter to prevent thundering herd problem.
+   * @ru Добавлять случайный jitter к задержке.
    */
   jitter?: boolean;
 }

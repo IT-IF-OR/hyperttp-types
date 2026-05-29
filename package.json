@@ -1,18 +1,22 @@
 {
   "name": "@hyperttp/types",
-  "version": "0.1.1",
+  "version": "0.1.5",
   "author": "dirold2",
+  "type": "module",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.d.ts"
+      "types": "./dist/index.d.ts"
     }
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dirold2/hyperttp-types.git"
   },
+  "main": "./dist/index.d.ts",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "devDependencies": {
     "@dirold2/dev-tools": "^1.0.16",
     "typescript": "^6.0.3"

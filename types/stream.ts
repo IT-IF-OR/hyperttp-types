@@ -1,43 +1,50 @@
+import type { ReadableStream } from "node:stream/web";
+
+/**
+ * @en Interface representing a raw streaming response.
+ * @ru Интерфейс, представляющий сырой потоковый ответ.
+ * @template TBody - Type of the response body stream.
+ */
 export interface StreamResponse<TBody = ReadableStream> {
   /**
-   * @ru HTTP статус код ответа
-   * @en HTTP status code
+   * @en HTTP status code.
+   * @ru HTTP статус код ответа.
    */
   status: number;
 
   /**
-   * @ru Заголовки ответа (сырые)
-   * @en Response headers (raw)
+   * @en Response headers (raw).
+   * @ru Заголовки ответа (сырые).
    */
   headers: Record<string, string | string[] | undefined>;
 
   /**
-   * @ru Потоковое тело (низкоуровневые чанки)
-   * @en Streamed body (low-level chunks)
+   * @en Streamed body (low-level chunks).
+   * @ru Потоковое тело (низкоуровневые чанки).
    */
   body: TBody;
 
   /**
-   * @ru Финальный URL (после редиректов)
-   * @en Final resolved URL (after redirects)
+   * @en Final resolved URL (after redirects).
+   * @ru Финальный URL (после редиректов).
    */
   url: string;
 
   /**
-   * @ru Сигнал для отслеживания abort (pipeline control)
-   * @en Optional signal for abort tracking (useful for pipeline control)
+   * @en Optional signal for abort tracking (useful for pipeline control).
+   * @ru Сигнал для отслеживания abort (pipeline control).
    */
   signal?: AbortSignal;
 
   /**
-   * @ru Content-Length если известен (zero-copy оптимизации)
-   * @en Content-Length if known (zero-copy optimizations)
+   * @en Content-Length if known (zero-copy optimizations).
+   * @ru Content-Length если известен (zero-copy оптимизации).
    */
   contentLength?: number;
 
   /**
-   * @ru Hint кодировки (gzip/br/etc)
-   * @en Encoding hint (gzip/br/etc)
+   * @en Encoding hint (gzip/br/etc).
+   * @ru Hint кодировки (gzip/br/etc).
    */
   encoding?: string;
 }

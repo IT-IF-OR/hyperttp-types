@@ -3,18 +3,18 @@ import type { HttpResponse, InternalRequest } from "./hyper.js";
 import type { IHyperCore } from "./core.js";
 import type { HyperttpError } from "./errors.js";
 /**
- * @ru Фазы жизненного цикла, определяющие строгий порядок выполнения в «луковичной» (onion) архитектуре.
- * @en Lifecycle phases defining strict execution order within the client's onion architecture.
+ * @ru Фазы плоского последовательного конвейера, определяющие строгий порядок выполнения запроса.
+ * @en Lifecycle phases defining strict sequential execution order within the flat client pipeline.
  */
 export type PluginPhase = 
 /**
- * @ru Метрики, логирование, трассировка (самый внешний слой).
- * @en Metrics, logging, tracing (the outermost layout layer).
+ * @ru Точка старта: инициализация метрик, логирование, трассировка.
+ * @en Entry point: metrics initialization, logging, and tracing.
  */
 "START"
 /**
- * @ru Кэширование, дедупликация (могут вернуть ответ сразу, минуя сеть).
- * @en Caching, request deduplication (can short-circuit and return responses instantly).
+ * @ru Подготовка: кэширование, дедупликация (могут вернуть ответ сразу, минуя сеть).
+ * @en Preparation: caching and request deduplication (can short-circuit and return responses instantly).
  */
  | "PREPARE"
 /**
@@ -23,15 +23,30 @@ export type PluginPhase =
  */
  | "CONTROL"
 /**
- * @ru Сериализация тела запроса, парсинг ответов (JSON, XML, HTML).
- * @en Payload serialization, response parsing (JSON, XML, HTML structures).
+ * @ru Форматирование: сериализация тела запроса, парсинг ответов (JSON, Buffers).
+ * @en Formatting: payload serialization and response parsing (JSON, Buffers).
  */
  | "FORMAT"
 /**
- * @ru Чистый сетевой транспорт ядра (самый глубокий слой).
- * @en Raw network transport engine layer (the deepest core layer).
+ * @ru Чистый сетевой транспорт ядра (вызов нативного fetch/underlying транспорта).
+ * @en Raw network transport engine layer.
  */
  | "NETWORK";
+/**
+ * @ru Режим исполнения хуков ответа (onResponse / onError).
+ * @en Execution strategy for response hooks (onResponse / onError).
+ */
+export type PluginExecutionMode = 
+/**
+ * @ru Блокирующий режим: конвейер ждет выполнения хука через `await` (нужно для парсеров, кэша).
+ * @en Blocking mode: the pipeline awaits the hook execution (required for parsers, caching).
+ */
+"blocking"
+/**
+ * @ru Фоновый режим: хук улетает в fire-and-forget, не задерживая сетевой ответ пользователю (метрики, логи).
+ * @en Background mode: fire-and-forget execution, never delaying the network response to the user (metrics, logs).
+ */
+ | "background";
 /**
  * @ru Единый неизменяемый контекст для плагина, переиспользуемый для экономии аллокаций памяти.
  * @en Unified immutable plugin context shared across hooks to prevent excessive garbage collection.
@@ -57,14 +72,6 @@ export interface PluginContext {
  */
 export type DispatchFn = <T = unknown>(req: InternalRequest) => Promise<HttpResponse<T>>;
 /**
- * @ru Функция-обертка (декоратор) для диспетчера, формирующая слой луковичной архитектуры.
- * @en Middleware decorator wrapper for the dispatch function forming an onion layer.
- * @param next - Next dispatch layer executor function.
- * @param ctx - Shared plugin execution context.
- * @returns Wrapped runtime dispatch function.
- */
-export type WrapDispatch = (next: DispatchFn, ctx: PluginContext) => DispatchFn;
-/**
  * @ru Интерфейс для проектирования расширений функционала ядра HyperCore.
  * @en Interface for designing extension plugins for the HyperCore processing engine.
  */
@@ -74,6 +81,16 @@ export interface HyperPlugin {
      * @en Unique plugin name identifier for tracking, logging, and deduplication.
      */
     readonly name: string;
+    /**
+     * @ru Целевая фаза выполнения конвейера. Используется ядром для плоской сортировки при регистрации.
+     * @en Target pipeline execution phase. Used by the core for flat sorting upon registration.
+     */
+    readonly phase: PluginPhase;
+    /**
+     * @ru Стратегия выполнения для фазы ответа. Если не указана, по умолчанию считается "blocking".
+     * @en Execution strategy for the response/error phase. Defaults to "blocking" if omitted.
+     */
+    readonly mode?: PluginExecutionMode;
     /**
      * @ru Динамическая проверка необходимости активации плагина на основе переданной конфигурации.
      * @en Dynamic check to evaluate if the plugin should activate based on provided client settings.
@@ -94,15 +111,15 @@ export interface HyperPlugin {
      * @param ctx - Shared plugin execution context.
      * @returns Short-circuit response, async promise wrapper or void execution.
      */
-    onRequest?: (req: InternalRequest, ctx: PluginContext) => Promise<HttpResponse<any> | void> | HttpResponse<any> | void;
+    onRequest?: (req: InternalRequest, ctx: PluginContext) => Promise<HttpResponse<unknown> | void> | HttpResponse<unknown> | void;
     /**
-     * @ru Перехватчик фазы успешного ответа. Используется для пост-обработки, логирования или наполнения кэша.
-     * @en Response phase interceptor hook used for data post-processing, analytics, or caching.
+     * @ru Перехватчик фазы успешного ответа. В зависимости от `mode` может блокировать поток или уходить в фон.
+     * @en Response phase interceptor hook. Depending on `mode`, it either blocks the pipeline or executes in the background.
      * @param res - Output HTTP client response reference.
      * @param req - Contextual internal request parameters.
      * @param ctx - Shared plugin execution context.
      */
-    onResponse?: (res: HttpResponse<any>, req: InternalRequest, ctx: PluginContext) => Promise<void> | void;
+    onResponse?: (res: HttpResponse<unknown>, req: InternalRequest, ctx: PluginContext) => Promise<void> | void;
     /**
      * @ru Перехватчик ошибок конвейера. Может перехватить исключение и вернуть HttpResponse для восстановления логики.
      * @en Error phase interceptor hook. Can swallow pipeline failures and return a fallback response container.
@@ -111,5 +128,5 @@ export interface HyperPlugin {
      * @param ctx - Shared plugin execution context.
      * @returns Recovered response container or void statement execution.
      */
-    onError?: (err: HyperttpError, req: InternalRequest, ctx: PluginContext) => Promise<HttpResponse<any> | void> | HttpResponse<any> | void;
+    onError?: (err: HyperttpError, req: InternalRequest, ctx: PluginContext) => Promise<HttpResponse<unknown> | void> | HttpResponse<unknown> | void;
 }

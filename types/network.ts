@@ -1,69 +1,73 @@
+/**
+ * @en Configuration options for network behavior and connection management.
+ * @ru Конфигурационные опции для сетевого поведения и управления соединениями.
+ */
 export interface NetworkOptions {
   /**
-   * @ru Таймаут запроса (мс)
-   * @en Request timeout in milliseconds
+   * @en Request timeout in milliseconds.
+   * @ru Таймаут запроса (мс).
    */
   timeout?: number;
 
   /**
-   * @ru Максимум одновременных запросов. 0 = без лимита
-   * @en Maximum concurrent requests. 0 = unlimited
+   * @en Maximum concurrent requests. 0 = unlimited.
+   * @ru Максимум одновременных запросов. 0 = без лимита.
    */
   maxConcurrent?: number;
 
   /**
-   * @ru Количество pipelined запросов на соединение (для HTTP/1.1 фоллбэка)
-   * @en Number of pipelined requests per connection (for HTTP/1.1 fallback)
+   * @en Number of pipelined requests per connection (for HTTP/1.1 fallback).
+   * @ru Количество pipelined запросов на соединение (для HTTP/1.1 фоллбэка).
    */
   pipelining?: number;
 
   /**
-   * @ru Таймаут keep-alive соединения (мс)
-   * @en Keep-alive connection timeout in milliseconds
+   * @en Keep-alive connection timeout in milliseconds.
+   * @ru Таймаут keep-alive соединения (мс).
    */
   keepAliveTimeout?: number;
 
   /**
-   * @ru Отклонять недоверенные SSL сертификаты
-   * @en Reject unauthorized SSL certificates
+   * @en Reject unauthorized SSL certificates.
+   * @ru Отклонять недоверенные SSL сертификаты.
    */
   rejectUnauthorized?: boolean;
 
   /**
-   * @ru Следовать за редиректами
-   * @en Follow HTTP redirects
+   * @en Follow HTTP redirects.
+   * @ru Следовать за редиректами.
    */
   followRedirects?: boolean;
 
   /**
-   * @ru Максимум редиректов
-   * @en Maximum number of redirects to follow
+   * @en Maximum number of redirects to follow.
+   * @ru Максимум редиректов.
    */
   maxRedirects?: number;
 
   /**
-   * @ru Максимальный размер ответа (байты)
-   * @en Maximum response body size in bytes
+   * @en Maximum response body size in bytes.
+   * @ru Максимальный размер ответа (байты).
    */
   maxResponseBytes?: number;
 
   /**
-   * @ru User-Agent заголовок
-   * @en User-Agent header string
+   * @en User-Agent header string.
+   * @ru User-Agent заголовок.
    */
   userAgent?: string;
 
   /**
-   * @ru Базовые заголовки по умолчанию для всех запросов
-   * @en Default base headers sent with every request
+   * @en Default base headers sent with every request.
+   * @ru Базовые заголовки по умолчанию для всех запросов.
    */
   headers?: Record<string, string | string[]>;
 
   /**
-   * @ru Функция валидации HTTP статуса
-   * @en Function to validate HTTP status code
-   * @param status - HTTP status code
-   * @returns `true` if status is valid
+   * @en Function to validate HTTP status code.
+   * @ru Функция валидации HTTP статуса.
+   * @param status - HTTP status code.
+   * @returns `true` if status is valid.
    */
   validateStatus?: (status: number) => boolean;
 }
