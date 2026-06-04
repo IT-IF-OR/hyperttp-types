@@ -1,131 +1,101 @@
 import type { Method, RequestBodyData } from "./http.js";
 
 /**
- * @en Custom helper methods injected into the response body by transport layers.
- * @ru Кастомные методы-хелперы, подмешиваемые транспортами в тело ответа.
+ * @en Extensions injected into streaming body objects.
+ * @ru Расширения, добавляемые к стримам тела ответа.
  */
 export interface TransportStreamExtensions {
   /**
-   * @en Drains the stream completely to safely release and recycle the underlying network socket.
-   * @ru Вычитывает поток «в никуда» для корректного освобождения и возврата сокета в пул соединений.
+   * @en Forces stream drain to release underlying socket.
+   * @ru Полностью вычитывает поток для освобождения сокета.
    */
   dump(): Promise<void>;
 }
 
 /**
- * @en Allowed raw response body types: Web ReadableStream (Bun), Node.js Readable, or null.
- * @ru Допустимые типы сырого тела ответа: Web ReadableStream (Bun), Node.js Readable или null.
+ * @en Raw response payload supported by transports.
+ * @ru Сырые типы тела ответа, поддерживаемые транспортами.
  */
 export type TransportResponsePayload =
-  | ((ReadableStream<Uint8Array> | ReadableStream) & TransportStreamExtensions)
+  | (ReadableStream<Uint8Array> & TransportStreamExtensions)
+  | (Uint8Array & TransportStreamExtensions)
   | null;
 
 /**
- * @en Normalized request structure for the network transport layer.
- * @ru Нормализованная структура запроса для уровня сетевого транспорта.
+ * @en Normalized request for transport layer.
+ * @ru Нормализованный запрос для транспортного слоя.
  */
 export interface TransportRequest {
-  /**
-   * @en HTTP method used for the request.
-   * @ru HTTP-метод, использованный для запроса.
-   */
   method: Method;
-
-  /**
-   * @en Full target URL string.
-   * @ru Полная строка целевого URL.
-   */
   url: string;
-
-  /**
-   * @en Dictionary of request headers.
-   * @ru Словарь заголовков запроса.
-   */
   headers: Record<string, string | string[]>;
-
-  /**
-   * @en Request body payload data.
-   * @ru Данные полезной нагрузки тела запроса.
-   */
   body?: RequestBodyData;
-
-  /**
-   * @en Abort signal for cancelling the request.
-   * @ru Сигнал прерывания для отмены запроса.
-   */
   signal?: AbortSignal;
 }
 
 /**
- * @en Raw low-level response returned by the network transport layer.
- * @ru Сырой низкоуровневый ответ, возвращаемый сетевым транспортом.
+ * @en Raw low-level response returned by transport implementations.
+ * @ru Сырой низкоуровневый ответ транспорта.
+ *
+ * ⚠️ IMPORTANT:
+ * Transport MUST NOT implement:
+ * - text/json/buffer parsing
+ * - decompression
+ * - caching logic
+ * - retries
  */
 export interface TransportResponse {
-  /**
-   * @en Numeric HTTP response status code.
-   * @ru Числовой HTTP-код статуса ответа.
-   */
   status: number;
-
-  /**
-   * @en Key-value map of response headers.
-   * @ru Карта заголовков ответа ключ-значение.
-   */
   headers: Record<string, string | string[]>;
-
-  /**
-   * @en The raw response body payload.
-   * @ru Сырая полезная нагрузка тела ответа.
-   */
   body: TransportResponsePayload;
-
-  /**
-   * @en The final resolved URL of the response.
-   * @ru Финальный разрешенный URL ответа.
-   */
   url: string;
-
-  /**
-   * @en Native high-performance text stream parsing implementation.
-   * @ru Нативная высокопроизводительная вычитка тела ответа в виде строки.
-   */
-  text(): Promise<string>;
-
-  /**
-   * @en Native high-performance async JSON stream parsing powered by runtime engine core.
-   * @ru Нативный парсинг тела ответа в JSON на уровне Си++ движка рантайма.
-   * @template T - Expected type of the parsed JSON.
-   */
-  json<T = unknown>(): Promise<T>;
-
-  /**
-   * @en Immediate stream drain helper to release and recycle the underlying socket.
-   * @ru Сброс стрима в никуда для моментального освобождения сокета обратно в пул.
-   */
-  dump(): Promise<void>;
 }
 
 /**
- * @en Unified interface for building runtime-specific network transports.
- * @ru Общий интерфейс для реализации сетевых транспортов.
+ * @en Adapter responsible for decoding TransportResponse into usable formats.
+ * @ru Адаптер, отвечающий за преобразование TransportResponse в удобные форматы.
+ *
+ * 💡 This is where:
+ * - decoding (gzip/brotli/custom C decoder)
+ * - parsing (json/xml/html)
+ * - buffering logic
+ * lives.
+ */
+export interface ResponseAdapter {
+  text(res: TransportResponse): Promise<string>;
+  json<T = unknown>(res: TransportResponse): Promise<T>;
+  buffer(res: TransportResponse): Promise<Buffer>;
+
+  /**
+   * @en Drain stream without reading body content.
+   * @ru Сброс потока без чтения тела.
+   */
+  dump(res: TransportResponse): Promise<void>;
+}
+
+/**
+ * @en Core transport interface for runtime implementations.
+ * @ru Базовый интерфейс транспорта для разных рантаймов.
+ *
+ * 🔥 Minimal contract by design:
+ * Only responsibility = perform HTTP request.
  */
 export interface HyperTransport {
   /**
-   * @en Executes a low-level network request based on the provided parameters.
-   * @ru Выполняет низкоуровневый сетевой запрос на основе переданных параметров.
-   * @param req - Normalized network request parameters.
+   * @en Executes HTTP request and returns raw response.
+   * @ru Выполняет HTTP запрос и возвращает сырой ответ.
    */
   execute(req: TransportRequest): Promise<TransportResponse>;
 
   /**
-   * @en Gracefully closes the transport, waiting for active connections to complete.
-   * @ru Мягкое закрытие транспорта с ожиданием завершения активных соединений.
+   * @en Gracefully closes transport and active connections.
+   * @ru Мягкое закрытие транспорта.
    */
   close?(): Promise<void>;
 
   /**
-   * @en Forcefully destroys the transport and closes all sockets immediately.
-   * @ru Экстренное уничтожение транспорта и принудительное закрытие всех сокетов.
+   * @en Immediately destroys transport and sockets.
+   * @ru Принудительное уничтожение транспорта.
    */
   destroy?(): Promise<void>;
 }

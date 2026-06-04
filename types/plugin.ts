@@ -2,7 +2,7 @@ import type { HttpClientOptions } from "./options.js";
 import type { InternalRequest } from "./request.js";
 import type { HttpResponse } from "./response.js";
 import type { HyperttpError } from "./error.js";
-import type { IHyperCore } from "./index.js";
+import type { IHyperCore, TransportResponse } from "./index.js";
 
 /**
  * @en Execution phases available for plugin interception in the request pipeline.
@@ -13,7 +13,8 @@ export type PluginPhase =
   | "PREPARE"
   | "CONTROL"
   | "FORMAT"
-  | "NETWORK";
+  | "NETWORK"
+  | "DATA";
 
 /**
  * @en Execution modes determining how the plugin affects the request flow.
@@ -40,63 +41,65 @@ export interface PluginContext {
 }
 
 /**
- * @en Function signature for dispatching a request through the remaining pipeline.
- * @ru Сигнатура функции для отправки запроса через оставшуюся часть конвейера.
- * @template T - Expected response body type.
- * @param req - The internal request object.
- * @returns A promise resolving to the HTTP response.
- */
-export type DispatchFn = <T = unknown>(
-  req: InternalRequest,
-) => Promise<HttpResponse<T>>;
-
-/**
- * @en Interface defining the structure and lifecycle hooks of a Hyperttp plugin.
- * @ru Интерфейс, определяющий структуру и хуки жизненного цикла плагина Hyperttp.
+ * @en Hyperttp plugin interface defining lifecycle hooks for request/response interception.
+ * Plugins can operate across different pipeline phases and optionally transform requests,
+ * responses, or handle errors.
+ *
+ * @ru Интерфейс плагина Hyperttp, определяющий хуки жизненного цикла для перехвата запросов и ответов.
+ * Плагины могут работать на разных фазах конвейера и опционально изменять запросы,
+ * ответы или обрабатывать ошибки.
  */
 export interface HyperPlugin {
   /**
-   * @en Unique name of the plugin for debugging and deduplication.
-   * @ru Уникальное имя плагина для отладки и дедупликации.
+   * @en Unique plugin identifier used for debugging and deduplication.
+   * @ru Уникальный идентификатор плагина для отладки и дедупликации.
    */
   readonly name: string;
 
   /**
-   * @en Execution phase in the request pipeline.
-   * @ru Фаза выполнения в конвейере запроса.
-   * @default "PREPARE"
+   * @en Pipeline execution phase where the plugin is executed.
+   * Controls when the plugin is invoked in the request lifecycle.
+   *
+   * @ru Фаза выполнения в конвейере, на которой выполняется плагин.
+   * Определяет момент вызова плагина в жизненном цикле запроса.
    */
   readonly phase?: PluginPhase;
 
   /**
-   * @en Execution mode determining if the plugin blocks the pipeline or runs in background.
-   * @ru Режим выполнения, определяющий, блокирует ли плагин конвейер или работает в фоне.
-   * @default "blocking"
+   * @en Execution mode of the plugin.
+   * - "blocking": plugin can affect request flow
+   * - "background": plugin runs without blocking pipeline
+   *
+   * @ru Режим выполнения плагина.
+   * - "blocking": плагин может влиять на поток запроса
+   * - "background": плагин выполняется асинхронно, не блокируя конвейер
    */
   readonly mode?: PluginExecutionMode;
 
   /**
-   * @en Predicate function to determine if the plugin should be active for the given config.
-   * @ru Функция-предикат для определения активности плагина для данной конфигурации.
-   * @default () => true
-   * @param config - The current client configuration.
-   * @returns `true` if the plugin should be enabled.
+   * @en Optional predicate to enable or disable plugin based on runtime configuration.
+   * If omitted, plugin is always enabled.
+   *
+   * @ru Условие активации плагина на основе конфигурации клиента.
+   * Если не указано — плагин всегда включён.
    */
   enabled?: (config: HttpClientOptions) => boolean;
 
   /**
-   * @en Initialization hook called when the plugin is registered.
-   * @ru Хук инициализации, вызываемый при регистрации плагина.
-   * @param ctx - The plugin context containing config and core reference.
+   * @en Called once when plugin is registered.
+   * Used for initialization, caching, or attaching runtime resources.
+   *
+   * @ru Вызывается один раз при регистрации плагина.
+   * Используется для инициализации, кэширования или подготовки ресурсов.
    */
   setup?: (ctx: PluginContext) => void;
 
   /**
-   * @en Hook invoked during the request processing phase. Can modify the request or return a response early.
-   * @ru Хук, вызываемый во время обработки запроса. Может изменять запрос или возвращать ответ досрочно.
-   * @param req - The internal request object.
-   * @param ctx - Optional plugin context.
-   * @returns A response object to short-circuit the pipeline, or void to continue.
+   * @en Hook executed before the request is dispatched.
+   * Can modify the request or short-circuit execution by returning a response.
+   *
+   * @ru Хук, выполняемый перед отправкой запроса.
+   * Может изменить запрос или прервать выполнение, вернув ответ.
    */
   onRequest?: (
     req: InternalRequest,
@@ -104,11 +107,11 @@ export interface HyperPlugin {
   ) => Promise<HttpResponse<unknown> | void> | HttpResponse<unknown> | void;
 
   /**
-   * @en Hook invoked after a successful response is received.
-   * @ru Хук, вызываемый после получения успешного ответа.
-   * @param res - The HTTP response object.
-   * @param req - The original internal request object.
-   * @param ctx - Optional plugin context.
+   * @en Hook executed after a response is received and before formatting.
+   * Useful for logging, metrics, or response transformation.
+   *
+   * @ru Хук, выполняемый после получения ответа и до форматирования.
+   * Используется для логирования, метрик или трансформации ответа.
    */
   onResponse?: (
     res: HttpResponse<unknown>,
@@ -117,12 +120,23 @@ export interface HyperPlugin {
   ) => Promise<void> | void;
 
   /**
-   * @en Hook invoked when an error occurs during request processing.
-   * @ru Хук, вызываемый при возникновении ошибки во время обработки запроса.
-   * @param err - The error object.
-   * @param req - The original internal request object.
-   * @param ctx - Optional plugin context.
-   * @returns A response object to recover from the error, or void to propagate the error.
+   * @en Low-level hook executed when transport data is received.
+   * Allows inspection or modification of raw transport response before parsing.
+   *
+   * @ru Низкоуровневый хук, вызываемый при получении данных транспорта.
+   * Позволяет перехватывать или изменять сырой транспортный ответ до парсинга.
+   */
+  onResponseData?: (
+    res: TransportResponse,
+    ctx?: PluginContext,
+  ) => Promise<TransportResponse | void> | TransportResponse | void;
+
+  /**
+   * @en Hook executed when an error occurs during request lifecycle.
+   * Can recover by returning a valid response or let error propagate.
+   *
+   * @ru Хук, вызываемый при ошибке в жизненном цикле запроса.
+   * Может восстановить выполнение, вернув ответ, или пропустить ошибку дальше.
    */
   onError?: (
     err: HyperttpError,
