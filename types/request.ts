@@ -8,7 +8,9 @@ import type {
 
 /**
  * @en Configuration object for constructing a low-level HTTP request.
+ * Allows explicitly specifying scheme, host, port, and path separately.
  * @ru Конфигурационный объект для построения низкоуровневого HTTP-запроса.
+ * Позволяет явно указывать схему, хост, порт и путь отдельно.
  */
 export interface RequestConfig {
   /**
@@ -56,7 +58,9 @@ export interface RequestConfig {
 
 /**
  * @en High-level interface representing a prepared HTTP request.
+ * Used as an input parameter for HyperCore methods (get, post, etc.).
  * @ru Высокоуровневый интерфейс, представляющий подготовленный HTTP-запрос.
+ * Используется как входной параметр для методов HyperCore (get, post и т.д.).
  */
 export interface RequestInterface {
   /**
@@ -91,14 +95,24 @@ export interface RequestInterface {
 
   /**
    * @en Custom metadata dictionary for extended context.
+   * Can be used by plugins to pass additional information.
    * @ru Словарь пользовательских метаданных для расширенного контекста.
+   * Может использоваться плагинами для передачи дополнительной информации.
    */
   meta?: Record<string, unknown>;
+
+  /**
+   * @en HTTP method (GET, POST, etc.). Defaults to GET if not specified.
+   * @ru HTTP-метод (GET, POST и т.д.). Если не указан, используется GET.
+   */
+  method?: Method;
 }
 
 /**
  * @en Internal normalized representation of an HTTP request used by the core pipeline.
+ * Created by HyperCore.acquireReq() and passed to the transport layer.
  * @ru Внутреннее нормализованное представление HTTP-запроса, используемое ядром конвейера.
+ * Создаётся методом HyperCore.acquireReq() и передаётся в транспортный слой.
  */
 export interface InternalRequest {
   /**
@@ -133,9 +147,15 @@ export interface InternalRequest {
 
   /**
    * @en Infrastructure metadata for timing and response type configuration.
+   * Extensible object — plugins can add their own fields via the index signature.
    * @ru Инфраструктурные метаданные для конфигурации таймингов и типа ответа.
+   * Расширяемый объект — плагины могут добавлять свои поля через index signature.
    */
   meta?: {
+    /**
+     * @en Timing measurements for network operations.
+     * @ru Замеры времени выполнения сетевых операций.
+     */
     timings?: {
       /**
        * @en Time spent on network operations in milliseconds.
@@ -144,9 +164,15 @@ export interface InternalRequest {
       networkMs?: number;
     };
     /**
-     * @en Expected response parsing strategy.
-     * @ru Ожидаемая стратегия парсинга ответа.
+     * @en Expected response parsing strategy (auto, json, text, stream, etc.).
+     * @ru Ожидаемая стратегия парсинга ответа (auto, json, text, stream и т.д.).
      */
     responseType?: ResponseType;
+
+    /**
+     * @en Extensible field for custom plugin metadata.
+     * @ru Расширяемое поле для пользовательских метаданных от плагинов.
+     */
+    [key: string]: unknown;
   };
 }

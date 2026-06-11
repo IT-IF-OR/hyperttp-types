@@ -3,10 +3,13 @@ import type { InternalRequest, RequestInterface } from "./request.js";
 import type { HttpResponse, StreamResponse } from "./response.js";
 import type { RequestBodyData } from "./http.js";
 import type { HyperPlugin } from "./plugin.js";
+import type { HyperAdapter } from "./adapters.js";
 
 /**
- * @en Core interface for the Hyperttp client, providing request dispatching, plugin management, and lifecycle control.
- * @ru Основной интерфейс клиента Hyperttp, предоставляющий диспетчеризацию запросов, управление плагинами и контроль жизненного цикла.
+ * @en Core interface for the Hyperttp client, providing request dispatching,
+ * plugin management, and lifecycle control.
+ * @ru Основной интерфейс клиента Hyperttp, предоставляющий диспетчеризацию запросов,
+ * управление плагинами и контроль жизненного цикла.
  */
 export interface IHyperCore {
   /**
@@ -33,8 +36,8 @@ export interface IHyperCore {
   use(plugin: HyperPlugin): this;
 
   /**
-   * @en Initiates a streaming request.
-   * @ru Инициирует потоковый запрос.
+   * @en Initiates a streaming GET request.
+   * @ru Инициирует потоковый GET-запрос.
    * @param req - Request configuration or URL string.
    * @param signal - Optional abort signal.
    * @returns A promise resolving to the stream response.
@@ -45,8 +48,8 @@ export interface IHyperCore {
   ): Promise<StreamResponse<unknown>>;
 
   /**
-   * @en Initiates a POST streaming request with a body.
-   * @ru Инициирует POST потоковый запрос с телом.
+   * @en Initiates a streaming POST request with a body.
+   * @ru Инициирует потоковый POST-запрос с телом.
    * @template T - Expected response body type.
    * @param req - Request configuration or URL string.
    * @param body - Request body data.
@@ -61,7 +64,7 @@ export interface IHyperCore {
 
   /**
    * @en Performs a GET request.
-   * @ru Выполняет GET запрос.
+   * @ru Выполняет GET-запрос.
    * @template T - Expected response body type.
    * @param req - Request configuration or URL string.
    * @param signal - Optional abort signal.
@@ -73,8 +76,8 @@ export interface IHyperCore {
   ): Promise<HttpResponse<T>>;
 
   /**
-   * @en Performs a POST request.
-   * @ru Выполняет POST запрос.
+   * @en Performs a POST request with a body.
+   * @ru Выполняет POST-запрос с телом.
    * @template T - Expected response body type.
    * @param req - Request configuration or URL string.
    * @param body - Request body data.
@@ -88,8 +91,8 @@ export interface IHyperCore {
   ): Promise<HttpResponse<T>>;
 
   /**
-   * @en Performs a PUT request.
-   * @ru Выполняет PUT запрос.
+   * @en Performs a PUT request with a body.
+   * @ru Выполняет PUT-запрос с телом.
    * @template T - Expected response body type.
    * @param req - Request configuration or URL string.
    * @param body - Request body data.
@@ -103,8 +106,8 @@ export interface IHyperCore {
   ): Promise<HttpResponse<T>>;
 
   /**
-   * @en Performs a PATCH request.
-   * @ru Выполняет PATCH запрос.
+   * @ru Выполняет PATCH-запрос с телом.
+   * @en Performs a PATCH request with a body.
    * @template T - Expected response body type.
    * @param req - Request configuration or URL string.
    * @param body - Request body data.
@@ -119,7 +122,7 @@ export interface IHyperCore {
 
   /**
    * @en Performs a DELETE request.
-   * @ru Выполняет DELETE запрос.
+   * @ru Выполняет DELETE-запрос.
    * @template T - Expected response body type.
    * @param req - Request configuration or URL string.
    * @param signal - Optional abort signal.
@@ -132,7 +135,7 @@ export interface IHyperCore {
 
   /**
    * @en Performs an OPTIONS request.
-   * @ru Выполняет OPTIONS запрос.
+   * @ru Выполняет OPTIONS-запрос.
    * @template T - Expected response body type.
    * @param req - Request configuration or URL string.
    * @param body - Optional request body data.
@@ -146,8 +149,8 @@ export interface IHyperCore {
   ): Promise<HttpResponse<T>>;
 
   /**
-   * @en Performs a HEAD request.
-   * @ru Выполняет HEAD запрос.
+   * @en Performs a HEAD request (no response body).
+   * @ru Выполняет HEAD-запрос (без тела ответа).
    * @param req - Request configuration or URL string.
    * @param signal - Optional abort signal.
    * @returns A promise resolving to the HTTP response with null body.
@@ -158,8 +161,8 @@ export interface IHyperCore {
   ): Promise<HttpResponse<null>>;
 
   /**
-   * @en Creates a new client instance by merging provided options with the current configuration.
-   * @ru Создает новый экземпляр клиента, объединяя предоставленные опции с текущей конфигурацией.
+   * @en Creates a new client instance by merging the current configuration with provided options.
+   * @ru Создаёт новый экземпляр клиента, объединяя текущую конфигурацию с переданными опциями.
    * @param options - Partial configuration options to extend.
    * @returns A new IHyperCore instance.
    */
@@ -167,22 +170,23 @@ export interface IHyperCore {
 
   /**
    * @en Creates a completely new client instance based on provided options.
-   * @ru Создает полностью новый экземпляр клиента на основе предоставленных опций.
+   * @ru Создаёт полностью новый экземпляр клиента на основе переданных опций.
    * @param options - Partial configuration options for the new instance.
    * @returns A new IHyperCore instance.
    */
   create(options: Partial<HttpClientOptions>): IHyperCore;
 
   /**
-   * @en Shuts down the client instance and releases resources.
-   * @ru Завершает работу экземпляра клиента и освобождает ресурсы.
+   * @ru Завершает работу клиента и освобождает ресурсы (соединения, пулы).
+   * @en Shuts down the client and releases resources (connections, pools).
    * @param graceful - If true, waits for active requests to complete before closing.
+   * @returns A promise that resolves when shutdown is complete.
    */
   destroy(graceful?: boolean): Promise<void>;
 
   /**
    * @en Performs a GET request and returns the response body as text.
-   * @ru Выполняет GET запрос и возвращает тело ответа как текст.
+   * @ru Выполняет GET-запрос и возвращает тело ответа как текст.
    * @param req - Request configuration or URL string.
    * @param signal - Optional abort signal.
    * @returns A promise resolving to the response text.
@@ -191,7 +195,7 @@ export interface IHyperCore {
 
   /**
    * @en Performs a GET request and parses the response body as JSON.
-   * @ru Выполняет GET запрос и парсит тело ответа как JSON.
+   * @ru Выполняет GET-запрос и парсит тело ответа как JSON.
    * @template T - Expected type of the parsed JSON.
    * @param req - Request configuration or URL string.
    * @param signal - Optional abort signal.
@@ -203,15 +207,27 @@ export interface IHyperCore {
   ): Promise<T>;
 
   /**
-   * @en Performs a GET request and immediately discards the response body.
-   * @ru Выполняет GET запрос и немедленно отбрасывает тело ответа.
+   * @en Performs a GET request and immediately discards the response body to free resources.
+   * @ru Выполняет GET-запрос и немедленно отбрасывает тело ответа для освобождения ресурсов.
    * @param req - Request configuration or URL string.
    * @param signal - Optional abort signal.
    * @returns A promise that resolves when the stream is drained.
    */
   dump(req: RequestInterface | string, signal?: AbortSignal): Promise<void>;
+
+  /**
+   * @ru Применяет адаптер к ядру для получения совместимого API сторонней библиотеки.
+   * Например, `core.adapter(axiosAdapter)` вернёт axios-совместимый инстанс.
+   * @en Applies an adapter to the core to obtain a third-party library compatible API.
+   * For example, `core.adapter(axiosAdapter)` returns an axios-compatible instance.
+   * @template T - The type of the adapted client instance.
+   * @param adapter - The adapter instance to apply.
+   * @returns The adapted client instance of type T.
+   */
+  adapter?<T>(adapter: HyperAdapter<T>): T;
 }
 
+export * from "./adapters.js";
 export * from "./http.js";
 export * from "./options.js";
 export * from "./request.js";
