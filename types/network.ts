@@ -1,5 +1,5 @@
-import type { RequestHeaders } from "./http";
-import type { StealthOptions } from "./stealth";
+import type { RequestHeaders } from "./http.js";
+import type { StealthOptions } from "./stealth.js";
 
 /**
  * @en Configuration options for network behavior and connection management.

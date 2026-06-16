@@ -1,4 +1,4 @@
-import type { ResponseHeaders } from "./response";
+import type { ResponseHeaders } from "./response.js";
 
 /**
  * @en Interface representing a raw streaming response.
