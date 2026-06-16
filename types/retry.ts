@@ -10,26 +10,26 @@ export interface RetryOptions {
   maxRetries?: number;
 
   /**
-   * @en Base delay between retries in milliseconds.
-   * @ru Базовая задержка между попытками (мс).
+   * @en Initial delay between retries in milliseconds.
+   * @ru Начальная задержка между попытками в миллисекундах.
    */
   baseDelay?: number;
 
   /**
    * @en Maximum delay cap between retries in milliseconds.
-   * @ru Максимальная задержка между попытками (мс).
+   * @ru Максимальная задержка между попытками в миллисекундах.
    */
   maxDelay?: number;
 
   /**
    * @en List of HTTP status codes that should trigger a retry.
-   * @ru Коды HTTP, при которых выполняется retry.
+   * @ru Список HTTP-кодов статуса, которые должны вызывать повторную попытку.
    */
   retryStatusCodes?: readonly number[];
 
   /**
    * @en Enable random jitter to prevent thundering herd problem.
-   * @ru Добавлять случайный jitter к задержке.
+   * @ru Включить случайный джиттер для предотвращения проблемы "громового стада".
    */
   jitter?: boolean;
 }

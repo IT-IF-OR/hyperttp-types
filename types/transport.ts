@@ -1,4 +1,5 @@
 import type { Method, RequestBodyData } from "./http.js";
+import type { StealthOptions } from "./stealth.js";
 
 /**
  * @en Extensions injected into streaming body objects.
@@ -119,6 +120,14 @@ export interface TransportRequest {
    * @ru Сигнал прерывания для отмены запроса.
    */
   signal?: AbortSignal;
+
+  /**
+   * @en Request-specific network stealth and camouflage options.
+   * Merged by core with global client configuration.
+   * @ru Специфичные для запроса опции скрытности и маскировки.
+   * Объединяются ядром с глобальной конфигурацией клиента.
+   */
+  stealth?: StealthOptions;
 }
 
 /**
@@ -126,7 +135,6 @@ export interface TransportRequest {
  *
  * ⚠️ IMPORTANT:
  * Transport MUST NOT implement:
- * - body parsing (text/json/buffer)
  * - decompression (gzip/brotli)
  * - caching logic
  * - retries
@@ -136,7 +144,6 @@ export interface TransportRequest {
  * ⚠️ ВАЖНО:
  * Транспорт НЕ ДОЛЖЕН реализовывать:
  * - парсинг тела (text/json/buffer)
- * - декомпрессию (gzip/brotli)
  * - логику кэширования
  * - повторные попытки (retries)
  */

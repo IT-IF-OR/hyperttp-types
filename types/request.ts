@@ -5,6 +5,7 @@ import type {
   RequestQuery,
   RequestBodyData,
 } from "./http.js";
+import type { StealthOptions } from "./stealth.js";
 
 /**
  * @en Configuration object for constructing a low-level HTTP request.
@@ -54,6 +55,12 @@ export interface RequestConfig {
    * @ru Данные полезной нагрузки тела запроса.
    */
   bodyData?: RequestBodyData;
+
+  /**
+   * @en Core settings for traffic camouflage and deep packet inspection (DPI) bypass.
+   * @ru Настройки маскировки трафика и обхода систем глубокого анализа пакетов (DPI).
+   */
+  stealth?: StealthOptions;
 }
 
 /**
@@ -73,7 +80,7 @@ export interface RequestInterface {
    * @en Dictionary of request headers.
    * @ru Словарь заголовков запроса.
    */
-  headers: RequestHeaders;
+  headers?: RequestHeaders;
 
   /**
    * @en Request body payload data.
@@ -106,6 +113,12 @@ export interface RequestInterface {
    * @ru HTTP-метод (GET, POST и т.д.). Если не указан, используется GET.
    */
   method?: Method;
+
+  /**
+   * @en Core settings for traffic camouflage and deep packet inspection (DPI) bypass for this specific request.
+   * @ru Настройки маскировки трафика и обхода систем глубокого анализа пакетов (DPI) для конкретного запроса.
+   */
+  stealth?: StealthOptions;
 }
 
 /**
@@ -175,4 +188,10 @@ export interface InternalRequest {
      */
     [key: string]: unknown;
   };
+
+  /**
+   * @en Applied stealth configuration for camouflage and DPI bypass.
+   * @ru Примененная конфигурация скрытности для маскировки и обхода DPI.
+   */
+  stealth?: StealthOptions;
 }

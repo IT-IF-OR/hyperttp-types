@@ -1,3 +1,6 @@
+import type { RequestHeaders } from "./http";
+import type { StealthOptions } from "./stealth";
+
 /**
  * @en Configuration options for network behavior and connection management.
  * @ru Конфигурационные опции для сетевого поведения и управления соединениями.
@@ -61,7 +64,7 @@ export interface NetworkOptions {
    * @en Default base headers sent with every request.
    * @ru Базовые заголовки по умолчанию для всех запросов.
    */
-  headers?: Record<string, string | string[]>;
+  headers?: RequestHeaders;
 
   /**
    * @en Function to validate HTTP status code.
@@ -70,4 +73,10 @@ export interface NetworkOptions {
    * @returns `true` if status is valid.
    */
   validateStatus?: (status: number) => boolean;
+
+  /**
+   * @en Core settings for traffic camouflage and deep packet inspection (DPI) bypass.
+   * @ru Настройки маскировки трафика и обхода систем глубокого анализа пакетов (DPI).
+   */
+  stealth?: StealthOptions;
 }

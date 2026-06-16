@@ -1,9 +1,10 @@
 import type { HttpClientOptions } from "./options.js";
 import type { InternalRequest, RequestInterface } from "./request.js";
-import type { HttpResponse, StreamResponse } from "./response.js";
+import type { HttpResponse } from "./response.js";
 import type { RequestBodyData } from "./http.js";
 import type { HyperPlugin } from "./plugin.js";
 import type { HyperAdapter } from "./adapters.js";
+import type { StreamResponse } from "./stream.js";
 
 /**
  * @en Core interface for the Hyperttp client, providing request dispatching,
@@ -228,11 +229,15 @@ export interface IHyperCore {
 }
 
 export * from "./adapters.js";
+export * from "./error.js";
 export * from "./http.js";
+export * from "./metrics.js";
+export * from "./network.js";
 export * from "./options.js";
+export * from "./plugin.js";
 export * from "./request.js";
 export * from "./response.js";
-export * from "./plugin.js";
-export * from "./metrics.js";
-export * from "./error.js";
+export * from "./retry.js";
+export * from "./stealth.js";
+export * from "./stream.js";
 export * from "./transport.js";

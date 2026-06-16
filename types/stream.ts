@@ -1,50 +1,54 @@
-import type { ReadableStream } from "node:stream/web";
+import type { ResponseHeaders } from "./response";
 
 /**
  * @en Interface representing a raw streaming response.
+ * Used for requests where the response body is returned as a ReadableStream
+ * without automatic buffering.
  * @ru Интерфейс, представляющий сырой потоковый ответ.
+ * Используется для запросов, где тело ответа возвращается как ReadableStream
+ * без автоматической буферизации.
  * @template TBody - Type of the response body stream.
  */
 export interface StreamResponse<TBody = ReadableStream> {
   /**
-   * @en HTTP status code.
-   * @ru HTTP статус код ответа.
+   * @en Numeric HTTP response status code.
+   * @ru Числовой HTTP-код статуса ответа.
    */
   status: number;
 
   /**
-   * @en Response headers (raw).
-   * @ru Заголовки ответа (сырые).
+   * @en Key-value map of response headers.
+   * @ru Карта заголовков ответа ключ-значение.
    */
-  headers: Record<string, string | string[] | undefined>;
+  headers: ResponseHeaders;
 
   /**
-   * @en Streamed body (low-level chunks).
-   * @ru Потоковое тело (низкоуровневые чанки).
+   * @en The raw body stream.
+   * @ru Сырой поток тела ответа.
    */
   body: TBody;
 
   /**
-   * @en Final resolved URL (after redirects).
-   * @ru Финальный URL (после редиректов).
+   * @en The final URL of the response.
+   * @ru Финальный URL ответа.
    */
   url: string;
 
   /**
-   * @en Optional signal for abort tracking (useful for pipeline control).
-   * @ru Сигнал для отслеживания abort (pipeline control).
+   * @en Abort signal associated with the stream.
+   * @ru Сигнал прерывания, связанный с потоком.
    */
   signal?: AbortSignal;
 
   /**
-   * @en Content-Length if known (zero-copy optimizations).
-   * @ru Content-Length если известен (zero-copy оптимизации).
+   * @en Total content length in bytes, if known (from the Content-Length header).
+   * @ru Общая длина контента в байтах, если известна (из заголовка Content-Length).
    */
   contentLength?: number;
 
   /**
-   * @en Encoding hint (gzip/br/etc).
-   * @ru Hint кодировки (gzip/br/etc).
+   * @en Character encoding of the response content (e.g., 'utf-8').
+   * @ru Кодировка символов содержимого ответа (например, 'utf-8').
    */
   encoding?: string;
 }
