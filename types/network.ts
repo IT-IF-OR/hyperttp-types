@@ -2,6 +2,30 @@ import type { RequestHeaders } from "./http.js";
 import type { StealthOptions } from "./stealth.js";
 
 /**
+ * @en Configuration options for in-memory caching layer (cookies, responses).
+ * @ru Опции конфигурации кэширования в памяти (cookies, ответы).
+ */
+export interface CacheOptions {
+  /**
+   * @en Enable or disable caching.
+   * @ru Включить или выключить кэширование.
+   */
+  enabled?: boolean;
+
+  /**
+   * @en Maximum number of cache entries (LRU eviction).
+   * @ru Максимальное количество записей в кэше (LRU-эвикция).
+   */
+  maxSize?: number;
+
+  /**
+   * @en Time-to-live in milliseconds for cache entries.
+   * @ru Время жизни записей кэша (мс).
+   */
+  ttl?: number;
+}
+
+/**
  * @en Configuration options for network behavior and connection management.
  * @ru Конфигурационные опции для сетевого поведения и управления соединениями.
  */
@@ -79,4 +103,16 @@ export interface NetworkOptions {
    * @ru Настройки маскировки трафика и обхода систем глубокого анализа пакетов (DPI).
    */
   stealth?: StealthOptions;
+
+  /**
+   * @en HTTP response cache configuration for transport layer.
+   * @ru Конфигурация кэша HTTP-ответов для транспортного слоя.
+   */
+  cache?: CacheOptions;
+
+  /**
+   * @en Cookie jar cache configuration. Controls TTL and max domains for stored cookies.
+   * @ru Конфигурация кэша cookie jar. Контролирует TTL и макс. доменов для хранимых cookies.
+   */
+  cookieCache?: CacheOptions;
 }

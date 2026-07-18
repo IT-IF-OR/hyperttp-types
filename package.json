@@ -1,6 +1,6 @@
 {
   "name": "@hyperttp/types",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "author": "dirold2",
   "license": "MIT",
   "type": "module",
@@ -23,9 +23,9 @@
     "fetch"
   ],
   "devDependencies": {
-    "@dirold2/dev-tools": "^1.0.16",
-    "typescript": "^6.0.3",
-    "@types/node": "^25.9.3"
+    "@dirold2/dev-tools": "^1.1.0",
+    "typescript": "^7.0.2",
+    "@types/node": "^26.1.1"
   },
   "scripts": {
     "build": "tsc && d-build",
