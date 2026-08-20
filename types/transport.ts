@@ -1,268 +1,151 @@
-import type { Method, RequestBodyData } from "./http.js";
-import type { StealthOptions } from "./stealth.js";
+import type { SenderProtocol } from "./sender.js";
 
 /**
- * @en Extensions injected into streaming body objects.
- * Guarantees the presence of the dump() method for proper resource cleanup.
- * @ru Расширения, добавляемые к стримам тела ответа.
- * Гарантирует наличие метода dump() для корректного освобождения ресурсов.
- */
-export interface TransportStreamExtensions {
-  /**
-   * @en Forces stream drain to release the underlying socket.
-   * Must be called if the response body won't be used,
-   * allowing the transport to return the connection to the pool.
-   * @ru Полностью вычитывает поток для освобождения сокета.
-   * Необходимо вызывать, если тело ответа не будет использоваться,
-   * чтобы транспорт мог вернуть соединение в пул.
-   * @returns A promise that resolves when the stream is fully drained.
-   */
-  dump(): Promise<void>;
-}
-
-/**
- * @en Extended ReadableStream with convenience methods for reading body content.
- * Added via runtime patching through patchReadableStream() to unify the API
- * across all environments (Node.js, Bun, Deno, Browser).
- * @ru Расширенный ReadableStream с удобными методами для чтения содержимого тела.
- * Добавляется через runtime-патч patchReadableStream() для унификации API
- * во всех средах (Node.js, Bun, Deno, Browser).
- */
-export interface HyperBody extends ReadableStream<Uint8Array> {
-  /**
-   * @en Reads the stream as text.
-   * @ru Читает поток как текст.
-   * @returns A promise resolving to the text content.
-   */
-  text(): Promise<string>;
-
-  /**
-   * @en Reads and parses the stream as JSON.
-   * @ru Читает и парсит поток как JSON.
-   * @template T - Expected type of the parsed JSON.
-   * @returns A promise resolving to the parsed JSON data.
-   */
-  json<T = unknown>(): Promise<T>;
-
-  /**
-   * @en Reads the stream as an ArrayBuffer.
-   * @ru Читает поток как ArrayBuffer.
-   * @returns A promise resolving to the binary data.
-   */
-  arrayBuffer(): Promise<ArrayBuffer>;
-
-  /**
-   * @en Reads the stream as a Blob.
-   * @ru Читает поток как Blob.
-   * @returns A promise resolving to the Blob representation.
-   */
-  blob(): Promise<Blob>;
-
-  /**
-   * @en Reads the stream as a Uint8Array.
-   * @ru Читает поток как Uint8Array.
-   * @returns A promise resolving to the byte array.
-   */
-  bytes(): Promise<Uint8Array>;
-
-  /**
-   * @en Cancels the stream to release resources.
-   * @ru Отменяет поток для освобождения ресурсов.
-   * @returns A promise that resolves when the stream is cancelled.
-   */
-  dump(): Promise<void>;
-}
-
-/**
- * @en Raw response payload types supported by transports.
- * The transport returns one of these values, and the core (HyperCore) wraps it into an HttpResponse.
- * @ru Сырые типы тела ответа, поддерживаемые транспортами.
- * Транспорт возвращает одно из этих значений, а ядро (HyperCore) оборачивает его в HttpResponse.
- */
-export type TransportResponsePayload =
-  | HyperBody
-  | (Uint8Array & TransportStreamExtensions)
-  | null;
-
-/**
- * @en Normalized request for the transport layer.
- * Created by the HyperCore and passed to the transport for execution.
- * @ru Нормализованный запрос для транспортного слоя.
- * Создаётся ядром HyperCore и передаётся в транспорт для выполнения.
+ * @ru Запрос, выполняемый транспортом: минимальный сетевой конверт с методом, URL, заголовками, телом и контекстом выполнения.
+ * @en Request executed by a transport: a minimal network envelope with method, URL, headers, body, and execution context.
  */
 export interface TransportRequest {
   /**
-   * @en HTTP request method (GET, POST, etc.).
-   * @ru HTTP-метод запроса (GET, POST и т.д.).
+   * @ru HTTP-метод (GET, POST и т.д.).
+   * @en HTTP method (GET, POST, etc.).
    */
-  method: Method;
+  readonly method: string;
 
   /**
-   * @en Full request URL (scheme + host + path + query).
-   * @ru Полный URL запроса (схема + хост + путь + query).
+   * @ru Полный целевой URL.
+   * @en Full target URL.
    */
-  url: string;
+  readonly url: string;
 
   /**
-   * @en Dictionary of request headers.
-   * @ru Словарь заголовков запроса.
+   * @ru Заголовки запроса.
+   * @en Request headers.
    */
-  headers: Record<string, string | string[]>;
+  readonly headers: Readonly<Record<string, string | string[]>>;
 
   /**
-   * @en Request body data (if applicable for the method).
-   * @ru Данные тела запроса (если применимо для метода).
+   * @ru Тело запроса.
+   * @en Request body.
    */
-  body?: RequestBodyData;
+  readonly body?: unknown;
 
   /**
-   * @en Abort signal for cancelling the request.
-   * @ru Сигнал прерывания для отмены запроса.
+   * @ru Сигнал прерывания для отмены операции.
+   * @en Abort signal to cancel the operation.
    */
-  signal?: AbortSignal;
+  readonly signal?: AbortSignal;
 
   /**
-   * @en Request-specific network stealth and camouflage options.
-   * Merged by core with global client configuration.
-   * @ru Специфичные для запроса опции скрытности и маскировки.
-   * Объединяются ядром с глобальной конфигурацией клиента.
+   * @ru Идентификатор протокола, от имени которого выполняется запрос.
+   * @en Protocol identifier on behalf of which the request is executed.
    */
-  stealth?: StealthOptions;
+  readonly protocol: SenderProtocol;
 }
 
 /**
- * @en Raw low-level response returned by transport implementations.
- *
- * ⚠️ IMPORTANT:
- * Transport MUST NOT implement:
- * - decompression (gzip/brotli)
- * - caching logic
- * - retries
- *
- * @ru Сырой низкоуровневый ответ, возвращаемый реализациями транспорта.
- *
- * ⚠️ ВАЖНО:
- * Транспорт НЕ ДОЛЖЕН реализовывать:
- * - парсинг тела (text/json/buffer)
- * - логику кэширования
- * - повторные попытки (retries)
+ * @ru Сырой ответ транспорта: статус, заголовки и тело.
+ * @en Raw transport response: status, headers, and body.
  */
 export interface TransportResponse {
   /**
-   * @en Numeric HTTP response status code.
-   * @ru Числовой HTTP-код статуса ответа.
+   * @ru Числовой код статуса ответа.
+   * @en Numeric response status code.
    */
-  status: number;
+  readonly status: number;
 
   /**
-   * @en Dictionary of response headers.
-   * @ru Словарь заголовков ответа.
+   * @ru Текстовое описание статуса.
+   * @en Status text associated with the status code.
    */
-  headers: Record<string, string | string[]>;
+  readonly statusText?: string;
 
   /**
-   * @en Raw response body (stream, buffer, or null).
-   * @ru Сырое тело ответа (стрим, буфер или null).
+   * @ru Заголовки ответа.
+   * @en Response headers.
    */
-  body: TransportResponsePayload;
+  readonly headers: Readonly<Record<string, string | string[]>>;
 
   /**
-   * @en Final URL of the response (after any redirects).
-   * @ru Финальный URL ответа (после возможных редиректов).
+   * @ru Финальный URL ответа.
+   * @en Final response URL.
    */
-  url: string;
+  readonly url?: string;
+
+  /**
+   * @ru Сырое тело ответа (ReadableStream, Buffer или другой формат рантайма).
+   * @en Raw response body (ReadableStream, Buffer, or another runtime format).
+   */
+  readonly body: unknown;
+}
+
+export interface TransportListenOptions {
+  readonly host?: string;
+  readonly port?: number;
+  readonly signal?: AbortSignal;
+
+  /**
+   * @ru Колбэк доставки входящих запросов. Транспорт не знает о протоколах: это сырой ввод/вывод.
+   * Ядро оборачивает ресивер в этот колбэк. Если колбэк не передан, входящие запросы отклоняются.
+   * @en Callback delivering incoming requests. The transport knows nothing about protocols: this is raw I/O.
+   * The core wraps a receiver into this callback. If omitted, incoming requests are rejected.
+   * @param request - The raw incoming transport request.
+   * @returns The raw transport response.
+   */
+  readonly onRequest?: (
+    request: TransportRequest,
+  ) => Promise<TransportResponse> | TransportResponse;
+}
+
+export interface TransportServer {
+  /**
+   * @ru Мягко останавливает сервер, дожидаясь незавершённых запросов.
+   * @en Gracefully stops the server, waiting for pending requests.
+   */
+  close(): Promise<void> | void;
 }
 
 /**
- * @en Adapter responsible for decoding TransportResponse into usable formats.
- *
- * This is where:
- * - decoding (gzip/brotli/custom C decoder)
- * - parsing (json/xml/html)
- * - buffering logic
- * lives.
- *
- * @ru Адаптер, отвечающий за преобразование TransportResponse в удобные форматы.
- *
- * Здесь живёт:
- * - декодирование (gzip/brotli/кастомный C-декодер)
- * - парсинг (json/xml/html)
- * - логика буферизации
- */
-export interface ResponseAdapter {
-  /**
-   * @en Extracts the response body as text.
-   * @ru Извлекает тело ответа как текст.
-   * @param res - The raw transport response.
-   * @returns A promise resolving to the text content.
-   */
-  text(res: TransportResponse): Promise<string>;
-
-  /**
-   * @en Extracts and parses the response body as JSON.
-   * @ru Извлекает и парсит тело ответа как JSON.
-   * @template T - Expected type of the parsed JSON.
-   * @param res - The raw transport response.
-   * @returns A promise resolving to the parsed JSON data.
-   */
-  json<T = unknown>(res: TransportResponse): Promise<T>;
-
-  /**
-   * @en Extracts the response body as a binary buffer.
-   * @ru Извлекает тело ответа как бинарный буфер.
-   * @param res - The raw transport response.
-   * @returns A promise resolving to the Buffer.
-   */
-  buffer(res: TransportResponse): Promise<Buffer>;
-
-  /**
-   * @en Drains the stream without reading body content.
-   * Used to release the socket when the response body is not needed.
-   * @ru Сбрасывает поток без чтения содержимого тела.
-   * Используется для освобождения сокета, когда тело ответа не нужно.
-   * @param res - The raw transport response.
-   * @returns A promise that resolves when the stream is drained.
-   */
-  dump(res: TransportResponse): Promise<void>;
-}
-
-/**
- * @en Core transport interface for runtime implementations.
- *
- * Minimal contract by design:
- * Only responsibility = perform HTTP request.
- * All other logic (parsing, decompression, caching) lives in the core.
- *
- * @ru Базовый интерфейс транспорта для реализаций под разные рантаймы.
- *
- * Минимальный контракт по дизайну:
- * Единственная ответственность — выполнить HTTP-запрос.
- * Вся остальная логика (парсинг, декомпрессия, кэш) живёт в ядре.
+ * @ru Транспорт — «тупой» слой сетевого ввода/вывода. Не знает про семантику протоколов и не парсит тело.
+ * @en Transport — a "dumb" network I/O layer. It knows nothing about protocol semantics and does not parse bodies.
  */
 export interface HyperTransport {
   /**
-   * @en Executes HTTP request and returns raw response.
-   * @ru Выполняет HTTP-запрос и возвращает сырой ответ.
-   * @param req - The normalized transport request.
+   * @ru Список протоколов, поддерживаемых транспортом.
+   * @en List of protocols supported by the transport.
+   */
+  readonly protocols?: readonly SenderProtocol[];
+
+  /**
+   * @ru Проверяет поддержку протокола транспортом.
+   * @en Checks whether the transport supports a protocol.
+   * @param protocol - The protocol identifier.
+   * @returns true if the protocol is supported.
+   */
+  supports?(protocol: SenderProtocol): boolean;
+
+  /**
+   * @ru Выполняет запрос и возвращает сырой ответ.
+   * @en Executes the request and returns the raw response.
+   * @param request - The request to execute.
    * @returns A promise resolving to the raw transport response.
    */
-  execute(req: TransportRequest): Promise<TransportResponse>;
+  execute(request: TransportRequest): Promise<TransportResponse>;
 
   /**
-   * @en Gracefully closes transport and active connections.
-   * Waits for current requests to complete before closing.
-   * @ru Мягкое закрытие транспорта и активных соединений.
-   * Ждёт завершения текущих запросов перед закрытием.
-   * @returns A promise that resolves when the transport is closed.
+   * @ru Серверная операция транспорта, запускающая приём входящих запросов или сообщений.
+   * @en Server-side transport operation that starts listening for incoming requests or messages.
    */
-  close?(): Promise<void>;
+  listen?(options: TransportListenOptions): Promise<TransportServer>;
 
   /**
-   * @en Immediately destroys transport and sockets.
-   * Abruptly terminates all active connections.
-   * @ru Принудительное уничтожение транспорта и сокетов.
-   * Немедленно обрывает все активные соединения.
-   * @returns A promise that resolves when the transport is destroyed.
+   * @ru Мягко закрывает транспорт, дожидаясь незавершённых операций.
+   * @en Gracefully closes the transport, waiting for pending operations.
    */
-  destroy?(): Promise<void>;
+  close?(): Promise<void> | void;
+
+  /**
+   * @ru Немедленно уничтожает транспорт и освобождает ресурсы.
+   * @en Immediately destroys the transport and releases resources.
+   */
+  destroy?(): Promise<void> | void;
 }

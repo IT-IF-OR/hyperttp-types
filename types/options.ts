@@ -1,87 +1,95 @@
-import type { LogLevel } from "./http.js";
-import type { NetworkOptions } from "./network.js";
 import type { HyperPlugin } from "./plugin.js";
+import type { HyperProtocol } from "./protocol.js";
+import type { HyperReceiver } from "./receiver.js";
 import type { RetryOptions } from "./retry.js";
+import type { HyperSender } from "./sender.js";
 import type { HyperTransport } from "./transport.js";
 
 /**
- * @en Branding interface for Hyperttp plugin extensions.
- * @ru Интерфейс брендинга для расширений плагинов Hyperttp.
+ * @ru Уровни серьёзности логов.
+ * @en Log severity levels.
  */
-export interface HyperttpPluginsExtension {
-  /**
-   * @en Internal brand marker.
-   * @ru Внутренний маркер бренда.
-   */
-  readonly _hyperttpBrand?: never;
-}
+export type LogLevel = "debug" | "info" | "warn" | "error";
 
 /**
- * @en Base configuration options for the HTTP client instance.
- * @ru Базовые конфигурационные опции для экземпляра HTTP-клиента.
+ * @ru Базовые конфигурационные опции для экземпляра клиента.
+ * @en Base configuration options for a client instance.
  */
-export interface BaseHttpClientOptions {
+export interface BaseHyperClientOptions {
   /**
-   * @en Base URL for all relative request paths.
-   * @ru Базовый URL для всех относительных путей запросов.
+   * @ru Список модулей протоколов (sender и/или receiver) для регистрации при создании инстанса.
+   * @en List of protocol modules (sender and/or receiver) to register when the instance is created.
    */
-  baseURL?: string;
+  protocols?: HyperProtocol[];
 
   /**
-   * @en Network layer configuration overrides.
-   * @ru Переопределения конфигурации сетевого уровня.
+   * @ru Список сендеров протоколов для регистрации при создании клиента.
+   * @en List of protocol senders to register when the client is created.
    */
-  network?: Partial<NetworkOptions>;
+  senders?: HyperSender[];
 
   /**
-   * @en Retry logic configuration overrides.
-   * @ru Переопределения конфигурации логики повторных попыток.
+   * @ru Список ресиверов протоколов для регистрации при создании инстанса (серверная сторона).
+   * @en List of protocol receivers to register when the instance is created (server side).
    */
-  retry?: Partial<RetryOptions>;
+  receivers?: HyperReceiver[];
 
   /**
-   * @en Custom low-level network transport implementation.
-   * @ru Кастомный низкоуровневый транспорт (например, для тестов или специфичного рантайма).
+   * @ru Кастомный низкоуровневый транспорт для выполнения сетевых операций
+   * (например, для тестов или специфичного рантайма). Поведение при отсутствии опции определяется runtime-ядром.
+   * @en Custom low-level transport for executing network operations
+   * (e.g., for tests or a specific runtime). Behavior when omitted is determined by the runtime core.
    */
   customTransport?: HyperTransport;
 
   /**
+   * @ru Кастомный сендер протокола; правила его использования определяются runtime-ядром.
+   * @en Custom protocol sender; usage rules are determined by the runtime core.
+   */
+  customSender?: HyperSender;
+
+  /**
+   * @ru Переопределения конфигурации логики повторных попыток.
+   * @en Retry logic configuration overrides.
+   */
+  retry?: Partial<RetryOptions>;
+
+  /**
+   * @ru Пользовательская функция логирования внутренних событий.
    * @en Custom logger function for internal events.
-   * @ru Пользовательская функция логирования для внутренних событий.
-   * @param level - Log severity level.
-   * @param message - Log message content.
+   * @param level - The log severity level.
+   * @param message - The log message.
    * @param meta - Optional additional metadata context.
    */
   logger?: (level: LogLevel, message: string, meta?: unknown) => void;
 
   /**
-   * @en Enable verbose logging output.
    * @ru Включить подробный вывод логов.
+   * @en Enable verbose logging output.
    */
   verbose?: boolean;
 
   /**
+   * @ru Каталоги для сканирования и загрузки внешних плагинов.
    * @en Directories to scan for loading external plugins.
-   * @ru Директории для сканирования и загрузки внешних плагинов.
    */
   pluginDirs?: string[];
 
   /**
-   * @en List of plugin instances or module paths to register.
    * @ru Список экземпляров плагинов или путей к модулям для регистрации.
+   * @en List of plugin instances or module paths to register.
    */
   plugins?: (HyperPlugin | string)[];
 
   /**
-   * @en Enable collection of performance metrics.
    * @ru Включить сбор метрик производительности.
+   * @en Enable performance metrics collection.
    */
   trackMetrics?: boolean;
 }
 
 /**
- * @en Full configuration options for the Hyperttp client, including plugin extensions.
- * @ru Полные конфигурационные опции для клиента Hyperttp, включая расширения плагинов.
+ * @ru Полная конфигурация клиента, включая расширения плагинов.
+ * @en Full client configuration, including plugin extensions.
  */
-export interface HttpClientOptions
-  extends BaseHttpClientOptions, HyperttpPluginsExtension {}
+export interface HyperClientOptions extends BaseHyperClientOptions {}

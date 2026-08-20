@@ -1,181 +1,139 @@
-import type { HttpClientOptions } from "./options.js";
-import type { InternalRequest, RequestInterface } from "./request.js";
-import type { HttpResponse } from "./response.js";
-import type { RequestBodyData } from "./http.js";
+import type { HyperClientOptions } from "./options.js";
 import type { HyperPlugin } from "./plugin.js";
-import type { HyperAdapter } from "./adapters.js";
-import type { StreamResponse } from "./stream.js";
+import type { HyperProtocol } from "./protocol.js";
+import type { HyperReceiver, HyperServerListenOptions } from "./receiver.js";
+import type { HyperSender, SenderProtocol, SendRequest, UniversalResponse } from "./sender.js";
+import type { TransportServer } from "./transport.js";
 
 /**
- * @en Core interface for the Hyperttp client, providing request dispatching,
- * plugin management, and lifecycle control.
- * @ru Основной интерфейс клиента Hyperttp, предоставляющий диспетчеризацию запросов,
- * управление плагинами и контроль жизненного цикла.
+ * @ru Интерфейс-контейнер для пространств имён протоколов (например `core.rest`, `core.grpc`).
+ * Расширяется сторонними пакетами протоколов через Module Augmentation.
+ * @en Container interface for protocol client namespaces (e.g. `core.rest`, `core.grpc`).
+ * Extended by external protocol packages (@hyperttp/rest, @hyperttp/grpc) using Module Augmentation.
  */
-export interface IHyperCore {
+export interface HyperProtocols {}
+
+/**
+ * @ru Основной интерфейс ядра, предоставляющий мультипротокольную диспетчеризацию.
+ * @en Core engine interface providing protocol-agnostic dispatch.
+ */
+export interface IHyperCore extends HyperProtocols {
   /**
-   * @en The current immutable instance configuration.
    * @ru Текущая неизменяемая конфигурация инстанса.
+   * @en The current immutable instance configuration.
    */
-  readonly config: HttpClientOptions;
+  readonly config: HyperClientOptions;
 
   /**
-   * @en Dispatches an internal request through the full plugin and transport pipeline.
-   * @ru Отправляет внутренний запрос через полный конвейер плагинов и транспорта.
-   * @template T - Expected response body type.
-   * @param req - The normalized internal request object.
-   * @returns A promise resolving to the HTTP response.
+   * @ru Универсальный метод отправки запроса через зарегистрированные сендеры.
+   * @en Universal dispatch method that routes a request to the registered sender.
+   * @template TInput - The type of the request input.
+   * @template TOutput - The type of the response data.
+   * @template P - The protocol identifier.
+   * @param req - The universal request being dispatched.
+   * @returns A promise resolving to the universal response.
    */
-  dispatch<T = unknown>(req: InternalRequest): Promise<HttpResponse<T>>;
+  send<TInput = unknown, TOutput = unknown, P extends string = string>(
+    req: SendRequest<TInput, P>,
+  ): Promise<UniversalResponse<TOutput>>;
 
   /**
-   * @en Registers a plugin into the client instance.
+   * @ru Возвращает зарегистрированный сендер для указанного протокола.
+   * @en Returns the registered sender for the given protocol.
+   * @template P - The protocol identifier.
+   * @param protocol - The protocol identifier.
+   * @returns The sender, or undefined if the protocol is not registered.
+   */
+  getSender<P extends SenderProtocol>(
+    protocol: P,
+  ): HyperSender<unknown, unknown, unknown, unknown, P> | undefined;
+
+  /**
+   * @ru Регистрирует сендер в ядре.
+   * @en Registers a sender into the core.
+   * @param sender - The sender to register.
+   * @returns The current instance for chaining.
+   */
+  registerSender<P extends SenderProtocol>(
+    sender: HyperSender<unknown, unknown, unknown, unknown, P>,
+  ): this;
+
+  /**
+   * @ru Возвращает зарегистрированный ресивер для указанного протокола.
+   * @en Returns the registered receiver for the given protocol.
+   * @template P - The protocol identifier.
+   * @param protocol - The protocol identifier.
+   * @returns The receiver, or undefined if the protocol is not registered.
+   */
+  getReceiver<P extends SenderProtocol>(
+    protocol: P,
+  ): HyperReceiver<unknown, unknown, unknown, unknown, P> | undefined;
+
+  /**
+   * @ru Регистрирует ресивер в ядре (серверная сторона).
+   * @en Registers a receiver into the core (server side).
+   * @param receiver - The receiver to register.
+   * @returns The current instance for chaining.
+   */
+  registerReceiver<P extends SenderProtocol>(
+    receiver: HyperReceiver<unknown, unknown, unknown, unknown, P>,
+  ): this;
+
+  /**
+   * @ru Возвращает зарегистрированный модуль протокола.
+   * @en Returns the registered protocol module.
+   * @template P - The protocol identifier.
+   * @param protocol - The protocol identifier.
+   * @returns The protocol module, or undefined if the protocol is not registered.
+   */
+  getProtocol<P extends SenderProtocol>(
+    protocol: P,
+  ): HyperProtocol<unknown, unknown, unknown, unknown, P> | undefined;
+
+  /**
+   * @ru Регистрирует модуль протокола и его доступные sender и/или receiver.
+   * @en Registers a protocol module and its available sender and/or receiver.
+   * @param protocol - The protocol module to register.
+   * @returns The current instance for chaining.
+   */
+  registerProtocol<P extends SenderProtocol>(
+    protocol: HyperProtocol<unknown, unknown, unknown, unknown, P>,
+  ): this;
+
+  /**
+   * @ru Запускает сервер для указанного протокола. Связывает транспорт, ресивер и application handler.
+   * @en Starts a server for the given protocol. Wires together transport, receiver, and application handler.
+   * @template P - The protocol identifier.
+   * @param options - The server listen options.
+   * @returns A promise resolving to the transport server handle.
+   */
+  listen<P extends SenderProtocol = SenderProtocol>(
+    options: HyperServerListenOptions<P>,
+  ): Promise<TransportServer>;
+
+  /**
    * @ru Регистрирует плагин в экземпляре клиента.
+   * @en Registers a plugin into the client instance.
    * @param plugin - The plugin instance to register.
    * @returns The current instance for chaining.
    */
   use(plugin: HyperPlugin): this;
 
   /**
-   * @en Initiates a streaming GET request.
-   * @ru Инициирует потоковый GET-запрос.
-   * @param req - Request configuration or URL string.
-   * @param signal - Optional abort signal.
-   * @returns A promise resolving to the stream response.
-   */
-  stream(
-    req: RequestInterface | string,
-    signal?: AbortSignal,
-  ): Promise<StreamResponse<unknown>>;
-
-  /**
-   * @en Initiates a streaming POST request with a body.
-   * @ru Инициирует потоковый POST-запрос с телом.
-   * @template T - Expected response body type.
-   * @param req - Request configuration or URL string.
-   * @param body - Request body data.
-   * @param signal - Optional abort signal.
-   * @returns A promise resolving to the stream response.
-   */
-  postStream<T = unknown>(
-    req: RequestInterface | string,
-    body?: RequestBodyData,
-    signal?: AbortSignal,
-  ): Promise<StreamResponse<T>>;
-
-  /**
-   * @en Performs a GET request.
-   * @ru Выполняет GET-запрос.
-   * @template T - Expected response body type.
-   * @param req - Request configuration or URL string.
-   * @param signal - Optional abort signal.
-   * @returns A promise resolving to the HTTP response.
-   */
-  get<T = unknown>(
-    req: RequestInterface | string,
-    signal?: AbortSignal,
-  ): Promise<HttpResponse<T>>;
-
-  /**
-   * @en Performs a POST request with a body.
-   * @ru Выполняет POST-запрос с телом.
-   * @template T - Expected response body type.
-   * @param req - Request configuration or URL string.
-   * @param body - Request body data.
-   * @param signal - Optional abort signal.
-   * @returns A promise resolving to the HTTP response.
-   */
-  post<T = unknown>(
-    req: RequestInterface | string,
-    body?: RequestBodyData,
-    signal?: AbortSignal,
-  ): Promise<HttpResponse<T>>;
-
-  /**
-   * @en Performs a PUT request with a body.
-   * @ru Выполняет PUT-запрос с телом.
-   * @template T - Expected response body type.
-   * @param req - Request configuration or URL string.
-   * @param body - Request body data.
-   * @param signal - Optional abort signal.
-   * @returns A promise resolving to the HTTP response.
-   */
-  put<T = unknown>(
-    req: RequestInterface | string,
-    body?: RequestBodyData,
-    signal?: AbortSignal,
-  ): Promise<HttpResponse<T>>;
-
-  /**
-   * @ru Выполняет PATCH-запрос с телом.
-   * @en Performs a PATCH request with a body.
-   * @template T - Expected response body type.
-   * @param req - Request configuration or URL string.
-   * @param body - Request body data.
-   * @param signal - Optional abort signal.
-   * @returns A promise resolving to the HTTP response.
-   */
-  patch<T = unknown>(
-    req: RequestInterface | string,
-    body?: RequestBodyData,
-    signal?: AbortSignal,
-  ): Promise<HttpResponse<T>>;
-
-  /**
-   * @en Performs a DELETE request.
-   * @ru Выполняет DELETE-запрос.
-   * @template T - Expected response body type.
-   * @param req - Request configuration or URL string.
-   * @param signal - Optional abort signal.
-   * @returns A promise resolving to the HTTP response.
-   */
-  delete<T = unknown>(
-    req: RequestInterface | string,
-    signal?: AbortSignal,
-  ): Promise<HttpResponse<T>>;
-
-  /**
-   * @en Performs an OPTIONS request.
-   * @ru Выполняет OPTIONS-запрос.
-   * @template T - Expected response body type.
-   * @param req - Request configuration or URL string.
-   * @param body - Optional request body data.
-   * @param signal - Optional abort signal.
-   * @returns A promise resolving to the HTTP response.
-   */
-  options<T = unknown>(
-    req: RequestInterface | string,
-    body?: RequestBodyData,
-    signal?: AbortSignal,
-  ): Promise<HttpResponse<T>>;
-
-  /**
-   * @en Performs a HEAD request (no response body).
-   * @ru Выполняет HEAD-запрос (без тела ответа).
-   * @param req - Request configuration or URL string.
-   * @param signal - Optional abort signal.
-   * @returns A promise resolving to the HTTP response with null body.
-   */
-  head(
-    req: RequestInterface | string,
-    signal?: AbortSignal,
-  ): Promise<HttpResponse<null>>;
-
-  /**
-   * @en Creates a new client instance by merging the current configuration with provided options.
    * @ru Создаёт новый экземпляр клиента, объединяя текущую конфигурацию с переданными опциями.
-   * @param options - Partial configuration options to extend.
+   * @en Creates a new client instance by merging the current configuration with provided options.
+   * @param options - The partial configuration to extend with.
    * @returns A new IHyperCore instance.
    */
-  extend(options: Partial<HttpClientOptions>): IHyperCore;
+  extend(options: Partial<HyperClientOptions>): IHyperCore;
 
   /**
-   * @en Creates a completely new client instance based on provided options.
    * @ru Создаёт полностью новый экземпляр клиента на основе переданных опций.
-   * @param options - Partial configuration options for the new instance.
+   * @en Creates a completely new client instance based on provided options.
+   * @param options - The partial configuration for the new instance.
    * @returns A new IHyperCore instance.
    */
-  create(options: Partial<HttpClientOptions>): IHyperCore;
+  create(options: Partial<HyperClientOptions>): IHyperCore;
 
   /**
    * @ru Завершает работу клиента и освобождает ресурсы (соединения, пулы).
@@ -184,60 +142,16 @@ export interface IHyperCore {
    * @returns A promise that resolves when shutdown is complete.
    */
   destroy(graceful?: boolean): Promise<void>;
-
-  /**
-   * @en Performs a GET request and returns the response body as text.
-   * @ru Выполняет GET-запрос и возвращает тело ответа как текст.
-   * @param req - Request configuration or URL string.
-   * @param signal - Optional abort signal.
-   * @returns A promise resolving to the response text.
-   */
-  text(req: RequestInterface | string, signal?: AbortSignal): Promise<string>;
-
-  /**
-   * @en Performs a GET request and parses the response body as JSON.
-   * @ru Выполняет GET-запрос и парсит тело ответа как JSON.
-   * @template T - Expected type of the parsed JSON.
-   * @param req - Request configuration or URL string.
-   * @param signal - Optional abort signal.
-   * @returns A promise resolving to the parsed JSON data.
-   */
-  json<T = unknown>(
-    req: RequestInterface | string,
-    signal?: AbortSignal,
-  ): Promise<T>;
-
-  /**
-   * @en Performs a GET request and immediately discards the response body to free resources.
-   * @ru Выполняет GET-запрос и немедленно отбрасывает тело ответа для освобождения ресурсов.
-   * @param req - Request configuration or URL string.
-   * @param signal - Optional abort signal.
-   * @returns A promise that resolves when the stream is drained.
-   */
-  dump(req: RequestInterface | string, signal?: AbortSignal): Promise<void>;
-
-  /**
-   * @ru Применяет адаптер к ядру для получения совместимого API сторонней библиотеки.
-   * Например, `core.adapter(axiosAdapter)` вернёт axios-совместимый инстанс.
-   * @en Applies an adapter to the core to obtain a third-party library compatible API.
-   * For example, `core.adapter(axiosAdapter)` returns an axios-compatible instance.
-   * @template T - The type of the adapted client instance.
-   * @param adapter - The adapter instance to apply.
-   * @returns The adapted client instance of type T.
-   */
-  adapter?<T>(adapter: HyperAdapter<T>): T;
 }
 
+// Re-export standard universal types
 export * from "./adapters.js";
 export * from "./error.js";
-export * from "./http.js";
 export * from "./metrics.js";
-export * from "./network.js";
 export * from "./options.js";
 export * from "./plugin.js";
-export * from "./request.js";
-export * from "./response.js";
+export * from "./protocol.js";
+export * from "./receiver.js";
 export * from "./retry.js";
-export * from "./stealth.js";
-export * from "./stream.js";
+export * from "./sender.js";
 export * from "./transport.js";
