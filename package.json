@@ -5,13 +5,12 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist"],
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts"
+      "types": "./index.d.ts"
     }
   },
-  "types": "./dist/index.d.ts",
+  "types": "./index.d.ts",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/dirold2/hyperttp-types.git"
@@ -25,21 +24,5 @@
     "grpc",
     "graphql"
   ],
-  "devDependencies": {
-    "@dirold2/dev-tools": "^1.1.2",
-    "typescript": "^7.0.2",
-    "@types/node": "^26.2.0",
-    "oxlint": "^1.79.0",
-    "oxfmt": "^0.64.0"
-  },
-  "scripts": {
-    "build": "tsc && d-build",
-    "dist": "d-dist",
-    "deploy": "npm run build && npm run dist",
-    "publish": "d-publish",
-    "lint": "oxlint types",
-    "lint:fix": "oxlint types --fix",
-    "format": "oxfmt types",
-    "format:check": "oxfmt types --check"
-  }
+  "private": false
 }
