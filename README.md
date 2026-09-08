@@ -1,148 +1,731 @@
 # @hyperttp/types
 
-> Universal, protocol-agnostic core types for the Hyperttp ecosystem.
-> Универсальные протокол-независимые типы ядра экосистемы Hyperttp.
+> Universal, protocol-agnostic types for the Hyperttp ecosystem.
 
-## What is this / Что это
+`@hyperttp/types` is a declaration-only package. It defines the contracts shared by the
+Hyperttp runtime, protocol packages, and transports without depending on REST, gRPC, HTTP,
+or any other concrete protocol.
 
-`@hyperttp/types` — это **только типы** (declaration-only). Пакет не содержит реализации и не знает про конкретные протоколы. Здесь нет методов `get`/`post`/`call` — они добавляются протокольными пакетами через module augmentation.
+## Architecture
 
-## Architecture / Архитектура
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│ @hyperttp/types            IHyperCore (send/registerSender/… │
-│  (universal types)         + SendRequest/UniversalResponse/  │
-│                            + HyperSender/HyperReceiver/…     │
-│                            + HyperProtocol/RequestContext/…  │
-│                            + HyperTransport/TransportRequest │
-│                              /TransportResponse)             │
-└───────────────▲─────────────────────────────────────────────┘
-                │ declare module "@hyperttp/types"
-                │
-┌───────────────┴─────────────────────────────────────────────┐
-│ @hyperttp/rest      RestSender + HTTP-типы                   │
-│ @hyperttp/grpc      GrpcSender (protobuf → JSON)             │
-│ …other protocols                                            │
-└───────────────▲─────────────────────────────────────────────┘
-                │ peer / optional dependency
-┌───────────────┴─────────────────────────────────────────────┐
-│ @hyperttp/transport-node  · undici · bun  (dumb network I/O,│
-│    реализуют HyperTransport)                                 │
-└─────────────────────────────────────────────────────────────┘
+```text
+@hyperttp/types
+  Universal contracts: IHyperCore, HyperSender, HyperReceiver, HyperProtocol,
+  SendRequest, UniversalResponse, RequestContext, HyperTransport, and registries
+          ▲
+          │ module augmentation
+          │
+Protocol packages
+  @hyperttp/rest, @hyperttp/grpc, ...
+  Protocol semantics, input/output types, and convenience methods
+          ▲
+          │ use HyperTransport
+          │
+Transport packages
+  Node, Bun, browser, or custom transports
+  Protocol-agnostic network I/O
 ```
 
-Three layers / три слоя:
+The package has three conceptual layers:
 
-1. **Core types (`@hyperttp/types`)** — protocol-agnostic contract:
-    `IHyperCore`, `SendRequest`, `UniversalResponse`, `HyperSender`, `HyperReceiver`,
-    `HyperProtocol`, `RequestContext`, `SenderRegistry`, `ReceiverRegistry`, `ProtocolRegistry`,
-    `HyperPlugin`, `HyperClientOptions`, `HyperttpError`, `HyperStats`/`RequestMetrics`,
-    `RetryOptions`, `HyperAdapter`, `HyperTransport`/`TransportRequest`/`TransportResponse`.
+1. **Core types** — universal dispatch, lifecycle, plugin, retry, metrics, error, and
+   transport contracts.
+2. **Protocol packages** — protocol-specific senders, receivers, input/output types, and
+   optional `IHyperCore` methods.
+3. **Transports** — low-level I/O implementations. A transport executes normalized requests
+   and returns raw responses; it does not parse protocol payloads.
 
-2. **Protocol packages (`@hyperttp/rest`, `@hyperttp/grpc`, …)** — protocol semantics.
-   A package may provide a `HyperSender`, a `HyperReceiver`, or both, and augment
-   `IHyperCore` with its own methods. The runtime core provides the transport to senders
-   during `send()`, dispatches `core.get()`-style calls through the sender's `methods`
-   surface, and routes incoming transport requests through receivers.
+## Installation
 
-3. **Transports (`@hyperttp/transport-node/-undici/-bun`)** — **dumb** network I/O.
-   Concrete implementations of the `HyperTransport` interface. They only speak HTTP
-   (method/url/headers/body) and return a raw response (status + headers + raw body payload).
-   They do **not** parse or interpret protocol payloads — that is the sender's or receiver's job.
-   One transport serves all protocols (gRPC also runs over HTTP/2).
+```sh
+npm install @hyperttp/types
+```
 
-### gRPC → JSON
+Runtime applications usually install this package transitively through `@hyperttp/core`.
+Protocol and transport packages should declare it as a peer dependency when appropriate.
 
-A gRPC sender encodes protobuf messages as JSON and sends them over a regular HTTP transport
-(gRPC JSON transcoding / Connect-style). No dedicated gRPC transport is required.
+## Core contracts
 
-## Usage / Использование
+### Client dispatch
+
+`IHyperCore` exposes protocol-neutral dispatch and registry operations:
 
 ```ts
-import { HyperClient } from "@hyperttp/core";      // runtime core
-import { RestSender } from "@hyperttp/rest";       // brings type augmentation + sender
-import "@hyperttp/rest";                            // optional: ensure augmentation is in scope
+import type {
+  IHyperCore,
+  SendRequest,
+  UniversalResponse,
+} from "@hyperttp/types";
 
-const client = new HyperClient({ senders: [new RestSender()] });
+async function request(core: IHyperCore) {
+  const response: UniversalResponse = await core.send({
+    protocol: "custom",
+    input: { value: 42 },
+  });
 
-const res = await client.get("https://api.example.com/users/1"); // typed via augmentation
-const raw = await client.send({ protocol: "rest", input: { /* … */ } });
+  return response.data;
+}
 ```
 
-## Customizing / Кастомизация
-
-Протоколы и сетевой ввод/вывод можно переопределить через опции клиента:
+The core also exposes runtime introspection methods:
 
 ```ts
-const client = new HyperClient({
-  senders: [new RestSender()],
-  customSender: new MyRestSender(),      // передаётся runtime-ядру
-  customTransport: new MockTransport(),  // передаётся runtime-ядру
-});
+await core.getProtocolName();
+await core.getSenderName();
+await core.getReceiverName();
+await core.getTransportName();
 ```
 
-- `customSender` — передаёт кастомный сендер протокола; правила его использования определяет runtime-ядро.
-- `customTransport` — передаёт реализацию `HyperTransport`; поведение при отсутствии опции определяет runtime-ядро.
+These methods are part of the universal interface and return names supplied or resolved by
+the runtime implementation.
 
-`customSender` supplies a custom protocol sender and `customTransport` supplies a
-`HyperTransport` implementation; the runtime core defines how it uses either option.
+### Protocol input inference
 
-## Module augmentation contract / Контракт аугментации
-
-Protocol packages plug into the universal core by augmenting `@hyperttp/types`
-(so the core type stays clean and dependency-free):
+Protocol packages extend `ProtocolInputMap` and, optionally, `ProtocolMetadataMap`:
 
 ```ts
-// @hyperttp/rest/src/index.ts
-import type { IHyperCore, HyperClientOptions } from "@hyperttp/types";
-import type { HttpResponse, RequestInterface } from "./http.js";
+// inside a protocol package
+import type { RestInput } from "./rest-input.js";
+import type { RestMetadata } from "./rest-metadata.js";
 
 declare module "@hyperttp/types" {
-  interface IHyperCore {
-    get<T = unknown>(req: RequestInterface | string, signal?: AbortSignal): Promise<HttpResponse<T>>;
-    post<T = unknown>(req: RequestInterface | string, body?: unknown, signal?: AbortSignal): Promise<HttpResponse<T>>;
-    // …
+  interface ProtocolInputMap {
+    rest: RestInput;
   }
-  interface HyperClientOptions {
-    rest?: RestSenderOptions;
+
+  interface ProtocolMetadataMap {
+    rest: RestMetadata;
   }
 }
 ```
 
-Rules / правила:
+After the augmentation is in scope, known protocol names can infer their input type when
+calling `send()`:
 
-- Augmentation adds **types only** — the runtime must provide the actual method
-  (see `HyperSender.methods` below).
-- A client-side protocol package must export its `HyperSender` implementation and expose the
-  protocol method surface via `HyperSender.methods` so the runtime core can dispatch:
-  ```ts
-  const restSender = {
-    protocol: "rest",
-    methods: { get, post, put, patch, delete, head, options },
-    prepare(req, ctx) { /* … */ },
-     send(prepared, transport, ctx) { /* … */ },
-    parse(raw, ctx) { /* … */ },
-  };
-  ```
-- For the runtime to accept augmented methods, the concrete `HyperCore` class should use
-  a `Proxy`/index-signature dispatch instead of a strict `implements IHyperCore` check.
+```ts
+core.send({
+  protocol: "rest",
+  input: {
+    method: "GET",
+    url: "/users",
+  },
+});
+```
 
-## Contributing a protocol / Свой протокол
+The generic fallback overload remains available for custom or dynamically loaded protocols.
+Use `InferProtocolInput<P>` when a reusable helper needs to expose the same behavior.
 
-1. Implement `HyperSender`, `HyperReceiver`, or both (sender phases: `prepare` → `send` → `parse`; receiver phases: `receive` → `handle` → `respond`).
-2. Define protocol-specific types in your package (REST: `Method`, `RequestInterface`,
-   `HttpResponse`…; gRPC: service/message types…).
-3. Augment `IHyperCore` (and `HyperClientOptions`) with `declare module "@hyperttp/types"` as needed.
-4. Re-export everything; consumers `import "@hyperttp/rest"` to activate client-side augmentations.
+### Server request/response inference
 
-## Notes / Примечания
+Server protocol packages use the corresponding server maps:
 
-- HTTP-specific types (`Method`, `HttpResponse`, `StealthOptions`, …) deliberately
-  **do not live here** — they belong to `@hyperttp/rest` and are provided through
-  the core only via augmentation.
-- Protocol-agnostic transport types (`TransportRequest`, `TransportResponse`,
-  `HyperTransport`) **do live here**: transports are "dumb" network I/O and have
-  no protocol semantics, so they belong to the universal core.
-- Bump `@hyperttp/core`, `@hyperttp/transport-*` peer-dependencies to `@hyperttp/types@^0.3.0`
-  when releasing this breaking change.
+```ts
+import type { RestServerInput, RestServerResponse } from "./server-types.js";
+
+declare module "@hyperttp/types" {
+  interface ProtocolServerRequestMap {
+    rest: RestServerInput;
+  }
+
+  interface ProtocolServerResponseMap {
+    rest: RestServerResponse;
+  }
+}
+```
+
+`HyperServerListenOptions` uses these maps as its defaults, so a known protocol can provide
+typed server handlers without repeating generic parameters:
+
+```ts
+core.listen({
+  protocol: "rest",
+  handler(request, context) {
+    request.path;
+    request.query;
+    request.body;
+
+    return { status: 200, body: { ok: true } };
+  },
+});
+```
+
+The maps are intentionally empty in this package. Concrete request and response types belong
+to the protocol package that owns their semantics.
+
+## Senders and receivers
+
+A protocol sender implements the three-phase client lifecycle:
+
+```text
+prepare → send → parse
+```
+
+A protocol receiver implements the three-phase server lifecycle:
+
+```text
+receive → handle → respond
+```
+
+A sender can optionally expose a dynamic method surface for protocol convenience methods:
+
+```ts
+const sender = {
+  protocol: "rest",
+  methods: {
+    get,
+    post,
+    put,
+  },
+  prepare(request, context) {
+    // normalize protocol input
+  },
+  send(prepared, transport, context) {
+    // execute through HyperTransport
+  },
+  parse(raw, context) {
+    // normalize the transport response
+  },
+};
+```
+
+`HyperMethod` and `HyperMethodSurface` describe this dynamic plugin boundary. The actual
+method signatures remain protocol-specific and should be declared by the protocol package.
+
+## Transport contract
+
+`HyperTransport` is deliberately protocol-neutral:
+
+```ts
+import type {
+  HyperTransport,
+  TransportRequest,
+  TransportResponse,
+} from "@hyperttp/types";
+
+const transport: HyperTransport = {
+  async execute(request: TransportRequest): Promise<TransportResponse> {
+    // Perform runtime-specific I/O here.
+    throw new Error("not implemented");
+  },
+};
+```
+
+`TransportRequest` contains normalized headers and universal transport capabilities such as:
+
+- `stream` — request streaming when supported;
+- `followRedirects` — redirect handling when supported;
+- `maxRedirects` — redirect limit when redirect handling is enabled.
+
+Flexible protocol-level input should be normalized before it reaches the transport. For
+example, a REST package may accept `Headers`, tuples, or a record, while the transport sees
+the portable normalized record form.
+
+### Shutdown lifecycle
+
+Transports may implement both `close()` and `destroy()`:
+
+- `close()` is the graceful shutdown operation and may wait for pending work;
+- `destroy()` is the immediate shutdown operation.
+
+The `graceful` argument of `IHyperCore.destroy()` is forwarded to the runtime lifecycle where
+supported. Actual request draining is transport-dependent. During forced shutdown, runtimes
+should prefer `destroy()` when it is available; during graceful shutdown, they should prefer
+`close()`.
+
+## Module augmentation
+
+Protocol packages extend the core without adding protocol dependencies to this package:
+
+```ts
+// @hyperttp/rest/src/types.ts
+import type { IHyperCore, HyperClientOptions } from "@hyperttp/types";
+import type { RestInput, RestResponse } from "./types.js";
+
+declare module "@hyperttp/types" {
+  interface IHyperCore {
+    get<T = unknown>(url: string): Promise<RestResponse<T>>;
+  }
+
+  interface HyperClientOptions {
+    rest?: {
+      baseUrl?: string;
+    };
+  }
+
+  interface ProtocolInputMap {
+    rest: RestInput;
+  }
+
+  interface ProtocolServerRequestMap {
+    rest: RestInput;
+  }
+}
+```
+
+Module augmentation adds compile-time contracts only. The runtime package must provide the
+actual sender, receiver, and convenience method implementations.
+
+To activate an augmentation, import the protocol package or its augmentation entry point:
+
+```ts
+import "@hyperttp/core/rest";
+```
+
+## Creating a protocol package
+
+1. Define protocol-specific input, output, metadata, and server request/response types.
+2. Implement `HyperSender`, `HyperReceiver`, or both.
+3. Extend `ProtocolInputMap` and any other applicable maps through module augmentation.
+4. Add optional `IHyperCore` and `HyperClientOptions` extensions.
+5. Expose the protocol sender/receiver and ensure the runtime registers them.
+6. Keep protocol parsing and serialization in the protocol package, not in the transport.
+
+## What does not belong here
+
+The following remain outside `@hyperttp/types`:
+
+- REST request and response models;
+- HTTP methods and REST convenience APIs;
+- fetch-specific or Node-specific transport options;
+- JSON parsing options;
+- protocol-specific error and metadata shapes.
+
+They belong to their protocol or transport packages and can reach the core through module
+augmentation where needed.
+
+## Development
+
+```sh
+npm install
+npm run build
+npm run lint
+npm run format:check
+```
+
+The package publishes generated declaration files from `dist/` and contains no runtime code.
+
+## Public API reference
+
+All declarations below are re-exported from `@hyperttp/types`.
+
+### `IHyperCore` and `HyperProtocols`
+
+`HyperProtocols` is an empty augmentation container for protocol namespaces such as
+`core.rest` or `core.grpc`.
+
+`IHyperCore extends HyperProtocols` exposes:
+
+| Member | Type | Purpose |
+| --- | --- | --- |
+| `config` | `HyperClientOptions` | Immutable client configuration. |
+| `getProtocolName(protocol?)` | `<P extends SenderProtocol = SenderProtocol>(protocol?: P) => Promise<string>` | Resolve the registered protocol name. |
+| `getSenderName(protocol?)` | `<P extends SenderProtocol = SenderProtocol>(protocol?: P) => Promise<string>` | Resolve the sender name. |
+| `getReceiverName(protocol?)` | `<P extends SenderProtocol = SenderProtocol>(protocol?: P) => Promise<string>` | Resolve the receiver name. |
+| `getTransportName()` | `() => Promise<string>` | Resolve the transport name. |
+| `send(request)` | Typed overloads | Dispatch a protocol request. |
+| `getSender(protocol)` | `<P>(protocol: P) => HyperSender<...> \| undefined` | Look up a sender. |
+| `registerSender(sender)` | `<P>(sender: HyperSender<...>) => this` | Register a sender. |
+| `getReceiver(protocol)` | `<P>(protocol: P) => HyperReceiver<...> \| undefined` | Look up a receiver. |
+| `registerReceiver(receiver)` | `<P>(receiver: HyperReceiver<...>) => this` | Register a receiver. |
+| `getProtocol(protocol)` | `<P>(protocol: P) => HyperProtocol<...> \| undefined` | Look up a protocol module. |
+| `registerProtocol(protocol)` | `<P>(protocol: HyperProtocol<...>) => this` | Register a protocol module. |
+| `listen(options)` | `<P>(options: HyperServerListenOptions<P>) => Promise<TransportServer>` | Start a protocol server. |
+| `use(plugin)` | `(plugin: HyperPlugin) => this` | Register a plugin. |
+| `extend(options)` | `(options: Partial<HyperClientOptions>) => IHyperCore` | Create a client with merged options. |
+| `create(options)` | `(options: Partial<HyperClientOptions>) => IHyperCore` | Create a new client. |
+| `destroy(graceful?)` | `(graceful?: boolean) => Promise<void>` | Shut down the client. |
+
+The primary `send()` overload is:
+
+```ts
+send<P extends SenderProtocol, TOutput = unknown>(
+  request: SendRequest<InferProtocolInput<P>, P>,
+): Promise<UniversalResponse<TOutput>>;
+```
+
+A generic fallback is also available:
+
+```ts
+send<TInput = unknown, TOutput = unknown, P extends string = string>(
+  request: SendRequest<TInput, P>,
+): Promise<UniversalResponse<TOutput>>;
+```
+
+### Sender types
+
+#### `SenderProtocol`
+
+```ts
+type SenderProtocol = keyof ProtocolInputMap | (string & {});
+```
+
+It allows known augmented protocol keys as well as arbitrary custom strings.
+
+#### `ProtocolInputMap` and `ProtocolMetadataMap`
+
+Empty interfaces intended for module augmentation:
+
+```ts
+declare module "@hyperttp/types" {
+  interface ProtocolInputMap {
+    custom: CustomInput;
+  }
+
+  interface ProtocolMetadataMap {
+    custom: CustomMetadata;
+  }
+}
+```
+
+Utility types:
+
+```ts
+type InferProtocolInput<P extends string> =
+  P extends keyof ProtocolInputMap ? ProtocolInputMap[P] : unknown;
+
+type InferProtocolMetadata<P extends string> =
+  P extends keyof ProtocolMetadataMap
+    ? ProtocolMetadataMap[P]
+    : Record<string, unknown>;
+```
+
+#### `RequestContext`
+
+Shared request lifecycle context:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `requestId` | `string` | Unique request identifier. |
+| `startTime` | `number` | Request start timestamp. |
+| `signal` | `AbortSignal \| undefined` | Cancellation signal. |
+| `meta` | `Record<string, unknown>` | Shared lifecycle metadata. |
+| `state` | `Record<string, unknown>` | Mutable state shared between phases. |
+
+#### `SendRequest<TInput, P>`
+
+Universal request envelope:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `protocol` | `P` | Protocol identifier. |
+| `input` | `TInput` or `InferProtocolInput<P>` | Protocol-specific input. |
+| `signal` | `AbortSignal \| undefined` | Optional cancellation signal. |
+| `metadata` | `Readonly<InferProtocolMetadata<P>> \| undefined` | Protocol metadata. |
+
+#### `UniversalResponse<TOutput, TExtra>`
+
+Normalized protocol-neutral response:
+
+| Property | Type | Description |
+| --- | --- | --- |
+| `protocol` | `SenderProtocol` | Protocol that handled the request. |
+| `ok` | `boolean` | Protocol-defined success flag. |
+| `status` | `number` | Numeric status. |
+| `statusText` | `string \| undefined` | Status description. |
+| `headers` | `Readonly<Record<string, string \| string[]>>` | Normalized response headers. |
+| `url` | `string \| undefined` | Final response URL. |
+| `data` | `TOutput` | Normalized response data. |
+| `metadata` | `Readonly<TExtra> \| undefined` | Additional response metadata. |
+| `raw` | `unknown \| undefined` | Raw response before normalization. |
+
+#### `HyperMethod` and `HyperMethodSurface`
+
+```ts
+type HyperMethod = (...args: any[]) => unknown;
+type HyperMethodSurface = Readonly<Record<string, HyperMethod>>;
+```
+
+These types describe the dynamic method boundary used by protocol senders. Concrete protocol
+packages should provide the precise method signatures for their own APIs.
+
+#### `HyperSender<TInput, TOutput, TPrepared, TRaw, P>`
+
+A sender has the following members:
+
+| Member | Type | Description |
+| --- | --- | --- |
+| `protocol` | `P` | Protocol served by the sender. |
+| `methods` | `HyperMethodSurface \| undefined` | Optional convenience-method surface. |
+| `prepare` | `(request: SendRequest<TInput, P>, ctx: RequestContext) => TPrepared` | Prepare the request. |
+| `send` | `(prepared: TPrepared, transport: HyperTransport, ctx: RequestContext) => Promise<TRaw>` | Execute through a transport. |
+| `parse` | `(raw: TRaw, ctx: RequestContext) => UniversalResponse<TOutput> \| Promise<UniversalResponse<TOutput>>` | Normalize the raw response. |
+
+#### `SenderRegistry`
+
+```ts
+interface SenderRegistry {
+  register<P extends SenderProtocol>(sender: HyperSender<unknown, unknown, unknown, unknown, P>): void;
+  get<P extends SenderProtocol>(protocol: P): HyperSender<unknown, unknown, unknown, unknown, P> | undefined;
+  has(protocol: SenderProtocol): boolean;
+  readonly size: number;
+}
+```
+
+### Receiver and server types
+
+#### Server protocol maps
+
+`ProtocolServerRequestMap` and `ProtocolServerResponseMap` are empty augmentation points.
+Their utility types resolve known entries or fall back to `unknown`:
+
+```ts
+type InferProtocolServerRequest<P extends string> =
+  P extends keyof ProtocolServerRequestMap
+    ? ProtocolServerRequestMap[P]
+    : unknown;
+
+type InferProtocolServerResponse<P extends string> =
+  P extends keyof ProtocolServerResponseMap
+    ? ProtocolServerResponseMap[P]
+    : unknown;
+```
+
+#### `ServerRequestContext`
+
+Extends `RequestContext` with transport-dependent server information:
+
+| Property | Type |
+| --- | --- |
+| `connection` | `Readonly<Record<string, unknown>> \| undefined` |
+| `peer` | `Readonly<Record<string, unknown>> \| undefined` |
+
+#### `HyperServerListenOptions<P, TRequest, TResponse>`
+
+| Property | Type |
+| --- | --- |
+| `protocol` | `P` |
+| `host` | `string \| undefined` |
+| `port` | `number \| undefined` |
+| `signal` | `AbortSignal \| undefined` |
+| `handler` | `(request: TRequest, ctx: ServerRequestContext) => TResponse \| Promise<TResponse> \| undefined` |
+
+`TRequest` and `TResponse` default to the corresponding server protocol map entries.
+
+#### `HyperReceiver<TRequest, TResponse, TRawRequest, TRawResponse, P>`
+
+| Member | Type | Description |
+| --- | --- | --- |
+| `protocol` | `P` | Protocol served by the receiver. |
+| `receive` | `(request: TRawRequest, ctx: ServerRequestContext) => TRequest \| Promise<TRequest>` | Parse raw transport input. |
+| `handle` | `(request: TRequest, ctx: ServerRequestContext) => TResponse \| Promise<TResponse>` | Run application logic. |
+| `respond` | `(response: TResponse, ctx: ServerRequestContext) => TRawResponse \| Promise<TRawResponse>` | Serialize the protocol response. |
+
+#### `ReceiverRegistry`
+
+`ReceiverRegistry` mirrors `SenderRegistry` with `register`, `get`, `has`, and readonly `size`.
+
+### Protocol modules
+
+#### `HyperProtocol<TInput, TOutput, TReq, TRes, P>`
+
+A protocol module contains:
+
+- `protocol: P`;
+- an optional display `name`;
+- a `sender`, a `receiver`, or both.
+
+The generic module types connect the client sender and server receiver to the same protocol
+identifier. `ProtocolRegistry` provides `register`, `get`, `has`, and readonly `size` methods.
+
+### Client options
+
+#### `LogLevel`
+
+```ts
+type LogLevel = "debug" | "info" | "warn" | "error";
+```
+
+#### `BaseHyperClientOptions` / `HyperClientOptions`
+
+| Option | Type | Description |
+| --- | --- | --- |
+| `protocols` | `HyperProtocol[] \| undefined` | Protocol modules to register. |
+| `senders` | `HyperSender[] \| undefined` | Senders to register. |
+| `receivers` | `HyperReceiver[] \| undefined` | Receivers to register. |
+| `customTransport` | `HyperTransport \| undefined` | Custom low-level transport. |
+| `customSender` | `HyperSender \| undefined` | Custom sender. |
+| `retry` | `Partial<RetryOptions> \| undefined` | Retry configuration overrides. |
+| `logger` | `(level: LogLevel, message: string, meta?: unknown) => void` | Custom logger. |
+| `verbose` | `boolean \| undefined` | Enable verbose logging. |
+| `pluginDirs` | `string[] \| undefined` | Plugin directories. |
+| `plugins` | `(HyperPlugin \| string)[] \| undefined` | Plugin instances or module paths. |
+| `trackMetrics` | `boolean \| undefined` | Enable metrics collection. |
+
+`HyperClientOptions` currently extends `BaseHyperClientOptions` and is an augmentation point for
+protocol-specific configuration.
+
+### Plugins
+
+#### `PluginPhase` and `PluginExecutionMode`
+
+```ts
+type PluginPhase = "START" | "PREPARE" | "CONTROL" | "FORMAT" | "NETWORK" | "DATA";
+type PluginExecutionMode = "blocking" | "background";
+```
+
+#### `PluginContext`
+
+```ts
+interface PluginContext {
+  readonly config: HyperClientOptions;
+  readonly core: IHyperCore;
+}
+```
+
+#### `PluginOnRequestResult<TInput, TOutput>`
+
+```ts
+type PluginOnRequestResult<TInput = unknown, TOutput = unknown> =
+  | UniversalResponse<TOutput>
+  | SendRequest<TInput>
+  | void;
+```
+
+#### `HyperPlugin<TInput, TOutput>`
+
+A plugin has `name`, optional `phase` and `mode`, and optional hooks:
+
+| Hook | Signature |
+| --- | --- |
+| `enabled` | `(config: HyperClientOptions) => boolean` |
+| `setup` | `(ctx: PluginContext) => void` |
+| `onRequest` | `(req, ctx?, reqCtx?) => Promise<PluginOnRequestResult<TInput, TOutput>> \| PluginOnRequestResult<TInput, TOutput>` |
+| `onResponse` | `(res, req?, ctx?, reqCtx?) => Promise<UniversalResponse<TOutput> \| void> \| UniversalResponse<TOutput> \| void` |
+| `onError` | `(err, req?, ctx?, reqCtx?) => Promise<UniversalResponse<TOutput> \| void> \| UniversalResponse<TOutput> \| void` |
+
+`reqCtx` is the per-request `RequestContext`, allowing plugins to share `state` and `meta`
+across lifecycle phases.
+
+### Retry and errors
+
+#### `RetryOptions`
+
+| Option | Type |
+| --- | --- |
+| `maxRetries` | `number \| undefined` |
+| `baseDelay` | `number \| undefined` |
+| `maxDelay` | `number \| undefined` |
+| `jitter` | `boolean \| undefined` |
+
+#### `HyperttpError<TReq, TRes>`
+
+Extends `Error` with:
+
+| Property | Type |
+| --- | --- |
+| `code` | `string` |
+| `cause` | `unknown \| undefined` |
+| `request` | `TReq \| undefined` |
+| `response` | `TRes \| undefined` |
+| `status` | `number \| undefined` |
+| `statusCode` | `number \| undefined` |
+| `meta` | `{ retryCount: number; isRetryable: boolean; duration?: number; timings?: { start: number; end?: number } } \| undefined` |
+
+### Metrics
+
+#### `HyperStats`
+
+Optional built-in counters include `inflightRequests`, `cacheSize`, `queuedRequests`,
+`activeQueue`, and `rateLimitHits`. The interface also has a string index signature for
+custom metrics: `[key: string]: unknown`.
+
+#### `RequestMetrics`
+
+Required fields:
+
+- `startTime`, `endTime`, and `duration` — request timing in milliseconds/timestamps;
+- `bytesReceived` and `bytesSent`;
+- `retries`;
+- `cached`.
+
+Optional fields are `statusCode`, `url`, `method`, `bodyHash`, `plugins`, and `stages`.
+`stages` may contain `serializationMs`, `networkMs`, and `parsingMs`.
+
+### Adapters
+
+#### `HyperAdapter<T>`
+
+```ts
+interface HyperAdapter<T> {
+  readonly name: string;
+  readonly version?: string;
+  adapt(core: IHyperCore): T;
+}
+```
+
+Adapters translate `IHyperCore` into a third-party client shape such as Axios, Ky, or Got.
+
+### Transport types
+
+#### `TransportRequest`
+
+| Property | Type |
+| --- | --- |
+| `method` | `string` |
+| `url` | `string` |
+| `headers` | `Readonly<Record<string, string \| string[]>>` |
+| `body` | `unknown \| undefined` |
+| `signal` | `AbortSignal \| undefined` |
+| `protocol` | `SenderProtocol` |
+| `stream` | `boolean \| undefined` |
+| `followRedirects` | `boolean \| undefined` |
+| `maxRedirects` | `number \| undefined` |
+
+Headers are already normalized at this layer. Protocol packages may accept more flexible
+header input and normalize it before creating a `TransportRequest`.
+
+#### `TransportResponse`
+
+| Property | Type |
+| --- | --- |
+| `status` | `number` |
+| `statusText` | `string \| undefined` |
+| `headers` | `Readonly<Record<string, string \| string[]>>` |
+| `url` | `string \| undefined` |
+| `body` | `unknown` |
+
+#### `TransportListenOptions`
+
+| Property | Type |
+| --- | --- |
+| `host` | `string \| undefined` |
+| `port` | `number \| undefined` |
+| `signal` | `AbortSignal \| undefined` |
+| `onRequest` | `(request: TransportRequest) => Promise<TransportResponse> \| TransportResponse \| undefined` |
+
+`onError` is intentionally not part of this universal contract; transport-specific error
+callbacks belong in the concrete transport package.
+
+#### `TransportServer`
+
+```ts
+interface TransportServer {
+  close(): Promise<void> | void;
+}
+```
+
+#### `HyperTransport`
+
+| Member | Type |
+| --- | --- |
+| `protocols` | `readonly SenderProtocol[] \| undefined` |
+| `supports` | `(protocol: SenderProtocol) => boolean` (optional) |
+| `execute` | `(request: TransportRequest) => Promise<TransportResponse>` |
+| `listen` | `(options: TransportListenOptions) => Promise<TransportServer>` (optional) |
+| `close` | `() => Promise<void> \| void` (optional) |
+| `destroy` | `() => Promise<void> \| void` (optional) |
+
+## Development
+
+```sh
+npm install
+npm run build
+npm run lint
+npm run format:check
+```
+
+The package publishes generated declaration files from `dist/` and contains no runtime code.
+
+## License
+
+MIT

@@ -1,6 +1,6 @@
 {
   "name": "@hyperttp/types",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "author": "dirold2",
   "license": "MIT",
   "type": "module",
@@ -20,23 +20,20 @@
     "hyperttp",
     "types",
     "typescript",
-    "protocol-agnostic",
-    "http",
-    "grpc",
-    "graphql"
+    "protocol-agnostic"
   ],
   "devDependencies": {
-    "@dirold2/dev-tools": "^1.1.2",
+    "@dirold2/dev-tools": "^1.1.3",
     "typescript": "^7.0.2",
-    "@types/node": "^26.2.0",
-    "oxlint": "^1.79.0",
-    "oxfmt": "^0.64.0"
+    "@types/node": "^26.5.0",
+    "oxlint": "^1.82.0",
+    "oxfmt": "^0.67.0"
   },
   "scripts": {
     "build": "tsc && d-build",
     "dist": "d-dist",
     "deploy": "npm run build && npm run dist",
-    "publish": "d-publish",
+    "pub": "d-publish",
     "lint": "oxlint types",
     "lint:fix": "oxlint types --fix",
     "format": "oxfmt types",

@@ -5,6 +5,25 @@ All notable changes to `@hyperttp/types` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.0] - 2026-09-09
+
+### Added
+
+- `IHyperCore` introspection methods: `getProtocolName()`, `getSenderName()`,
+  `getReceiverName()`, and `getTransportName()`.
+- `ProtocolServerRequestMap` / `ProtocolServerResponseMap` registries with
+  `InferProtocolServerRequest` / `InferProtocolServerResponse` utility types for
+  protocol packages to connect server request and response types through Module Augmentation.
+- A typed `IHyperCore.send()` overload based on `ProtocolInputMap` while preserving
+  the generic fallback for custom protocols.
+- Named `HyperMethod` and `HyperMethodSurface` contracts for dynamic sender methods.
+
+### Changed
+
+- `HyperServerListenOptions` now infers server request and response types from the protocol.
+- `TransportRequest` now describes optional streaming and redirect-control capabilities.
+- Transport shutdown documentation now distinguishes graceful `close()` from forced `destroy()`.
+
 ## [0.3.0] - 2026-08-21
 
 > Breaking. The package becomes protocol-agnostic: HTTP-specific types move out

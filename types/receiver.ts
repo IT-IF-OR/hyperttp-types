@@ -4,6 +4,29 @@ import type { RequestContext, SenderProtocol } from "./sender.js";
  * @ru Контекст серверного запроса. Расширяет общий `RequestContext` информацией о соединении и пире.
  * @en Server request context. Extends the shared `RequestContext` with connection and peer information.
  */
+export interface ProtocolServerRequestMap {}
+
+/**
+ * @ru Глобальный реестр типов ответов серверных протоколов. Расширяется через Module Augmentation.
+ * @en Global map for server protocol response types. Extended via Module Augmentation.
+ */
+export interface ProtocolServerResponseMap {}
+
+/**
+ * @ru Выводит тип серверного запроса по идентификатору протокола.
+ * @en Infers the server request type from a protocol identifier.
+ */
+export type InferProtocolServerRequest<P extends string> = P extends keyof ProtocolServerRequestMap
+  ? ProtocolServerRequestMap[P]
+  : unknown;
+
+/**
+ * @ru Выводит тип серверного ответа по идентификатору протокола.
+ * @en Infers the server response type from a protocol identifier.
+ */
+export type InferProtocolServerResponse<P extends string> =
+  P extends keyof ProtocolServerResponseMap ? ProtocolServerResponseMap[P] : unknown;
+
 export interface ServerRequestContext extends RequestContext {
   /**
    * @ru Информация о входящем соединении (зависит от транспорта).
@@ -27,8 +50,8 @@ export interface ServerRequestContext extends RequestContext {
  */
 export interface HyperServerListenOptions<
   P extends SenderProtocol = SenderProtocol,
-  TRequest = unknown,
-  TResponse = unknown,
+  TRequest = InferProtocolServerRequest<P>,
+  TResponse = InferProtocolServerResponse<P>,
 > {
   /**
    * @ru Идентификатор протокола, который будет обслуживать сервер (например, 'rest', 'grpc').

@@ -2,7 +2,13 @@ import type { HyperClientOptions } from "./options.js";
 import type { HyperPlugin } from "./plugin.js";
 import type { HyperProtocol } from "./protocol.js";
 import type { HyperReceiver, HyperServerListenOptions } from "./receiver.js";
-import type { HyperSender, SenderProtocol, SendRequest, UniversalResponse } from "./sender.js";
+import type {
+  HyperSender,
+  SenderProtocol,
+  SendRequest,
+  UniversalResponse,
+  InferProtocolInput,
+} from "./sender.js";
 import type { TransportServer } from "./transport.js";
 
 /**
@@ -24,6 +30,18 @@ export interface IHyperCore extends HyperProtocols {
    */
   readonly config: HyperClientOptions;
 
+  /** Returns the registered protocol name, or the default protocol name. */
+  getProtocolName<P extends SenderProtocol = SenderProtocol>(protocol?: P): Promise<string>;
+
+  /** Returns the registered sender name, or the default sender name. */
+  getSenderName<P extends SenderProtocol = SenderProtocol>(protocol?: P): Promise<string>;
+
+  /** Returns the registered receiver name, or the default receiver name. */
+  getReceiverName<P extends SenderProtocol = SenderProtocol>(protocol?: P): Promise<string>;
+
+  /** Returns the configured transport name. */
+  getTransportName(): Promise<string>;
+
   /**
    * @ru Универсальный метод отправки запроса через зарегистрированные сендеры.
    * @en Universal dispatch method that routes a request to the registered sender.
@@ -33,6 +51,10 @@ export interface IHyperCore extends HyperProtocols {
    * @param req - The universal request being dispatched.
    * @returns A promise resolving to the universal response.
    */
+  send<P extends SenderProtocol, TOutput = unknown>(
+    req: SendRequest<InferProtocolInput<P>, P>,
+  ): Promise<UniversalResponse<TOutput>>;
+
   send<TInput = unknown, TOutput = unknown, P extends string = string>(
     req: SendRequest<TInput, P>,
   ): Promise<UniversalResponse<TOutput>>;
@@ -138,7 +160,7 @@ export interface IHyperCore extends HyperProtocols {
   /**
    * @ru Завершает работу клиента и освобождает ресурсы (соединения, пулы).
    * @en Shuts down the client and releases resources (connections, pools).
-   * @param graceful - If true, waits for active requests to complete before closing.
+   * @param graceful - Requests graceful shutdown where supported by the transport. Actual request draining is transport-dependent.
    * @returns A promise that resolves when shutdown is complete.
    */
   destroy(graceful?: boolean): Promise<void>;

@@ -40,6 +40,15 @@ export interface TransportRequest {
    * @en Protocol identifier on behalf of which the request is executed.
    */
   readonly protocol: SenderProtocol;
+
+  /** Whether the transport should expose the response as a stream when supported. */
+  readonly stream?: boolean;
+
+  /** Whether redirects should be followed when supported by the transport. */
+  readonly followRedirects?: boolean;
+
+  /** Maximum number of redirects when redirect following is enabled. */
+  readonly maxRedirects?: number;
 }
 
 /**
@@ -140,12 +149,14 @@ export interface HyperTransport {
   /**
    * @ru Мягко закрывает транспорт, дожидаясь незавершённых операций.
    * @en Gracefully closes the transport, waiting for pending operations.
+   * If both `close` and `destroy` are available, graceful shutdown prefers `close`.
    */
   close?(): Promise<void> | void;
 
   /**
    * @ru Немедленно уничтожает транспорт и освобождает ресурсы.
    * @en Immediately destroys the transport and releases resources.
+   * If both `destroy` and `close` are available, forced shutdown prefers `destroy`.
    */
   destroy?(): Promise<void> | void;
 }

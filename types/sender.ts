@@ -1,5 +1,11 @@
 import type { HyperTransport } from "./transport.js";
 
+/** A dynamically dispatched protocol method at the core/plugin boundary. */
+export type HyperMethod = (...args: any[]) => unknown;
+
+/** Method surface exposed by a protocol sender. */
+export type HyperMethodSurface = Readonly<Record<string, HyperMethod>>;
+
 /**
  * @ru Глобальный реестр типов входных данных для протоколов. Расширяется через Module Augmentation сторонними пакетами.
  * @en Global map for protocol input payload types. Extended via Module Augmentation by external protocol packages.
@@ -192,7 +198,7 @@ export interface HyperSender<
    * @ru Поверхность методов протокола, через которую ядро выполняет вызовы в стиле core.get().
    * @en Protocol method surface used by the core to dispatch core.get()-style calls.
    */
-  readonly methods?: Readonly<Record<string, (...args: never[]) => unknown>>;
+  readonly methods?: HyperMethodSurface;
 
   /**
    * @ru Фаза подготовки: преобразует универсальный запрос в подготовленное представление сендера.
