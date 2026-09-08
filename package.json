@@ -1,6 +1,6 @@
 {
   "name": "@hyperttp/types",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "author": "dirold2",
   "license": "MIT",
   "type": "module",
@@ -14,7 +14,7 @@
   "types": "./dist/index.d.ts",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/dirold2/hyperttp-types.git"
+    "url": "git+https://github.com/IT-IF-OR/hyperttp-types.git"
   },
   "keywords": [
     "hyperttp",
