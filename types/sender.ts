@@ -232,6 +232,14 @@ export interface HyperSender<
   ): UniversalResponse<TOutput> | Promise<UniversalResponse<TOutput>>;
 }
 
+export type AnyHyperSender<P extends SenderProtocol = SenderProtocol> = HyperSender<
+  any,
+  any,
+  any,
+  any,
+  P
+>;
+
 /**
  * @ru Контракт реестра протоколов для управления зарегистрированными сендерами.
  * @en Protocol registry contract for managing registered senders.

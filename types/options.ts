@@ -1,8 +1,8 @@
 import type { HyperPlugin } from "./plugin.js";
-import type { HyperProtocol } from "./protocol.js";
-import type { HyperReceiver } from "./receiver.js";
+import type { AnyHyperProtocol } from "./protocol.js";
+import type { AnyHyperReceiver } from "./receiver.js";
 import type { RetryOptions } from "./retry.js";
-import type { HyperSender } from "./sender.js";
+import type { AnyHyperSender } from "./sender.js";
 import type { HyperTransport } from "./transport.js";
 
 /**
@@ -20,19 +20,19 @@ export interface BaseHyperClientOptions {
    * @ru Список модулей протоколов (sender и/или receiver) для регистрации при создании инстанса.
    * @en List of protocol modules (sender and/or receiver) to register when the instance is created.
    */
-  protocols?: HyperProtocol[];
+  protocols?: AnyHyperProtocol[];
 
   /**
    * @ru Список сендеров протоколов для регистрации при создании клиента.
    * @en List of protocol senders to register when the client is created.
    */
-  senders?: HyperSender[];
+  senders?: AnyHyperSender[];
 
   /**
    * @ru Список ресиверов протоколов для регистрации при создании инстанса (серверная сторона).
    * @en List of protocol receivers to register when the instance is created (server side).
    */
-  receivers?: HyperReceiver[];
+  receivers?: AnyHyperReceiver[];
 
   /**
    * @ru Кастомный низкоуровневый транспорт для выполнения сетевых операций
@@ -46,7 +46,7 @@ export interface BaseHyperClientOptions {
    * @ru Кастомный сендер протокола; правила его использования определяются runtime-ядром.
    * @en Custom protocol sender; usage rules are determined by the runtime core.
    */
-  customSender?: HyperSender;
+  customSender?: AnyHyperSender;
 
   /**
    * @ru Переопределения конфигурации логики повторных попыток.

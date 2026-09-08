@@ -323,12 +323,12 @@ All declarations below are re-exported from `@hyperttp/types`.
 | `getReceiverName(protocol?)` | `<P extends SenderProtocol = SenderProtocol>(protocol?: P) => Promise<string>` | Resolve the receiver name. |
 | `getTransportName()` | `() => Promise<string>` | Resolve the transport name. |
 | `send(request)` | Typed overloads | Dispatch a protocol request. |
-| `getSender(protocol)` | `<P>(protocol: P) => HyperSender<...> \| undefined` | Look up a sender. |
-| `registerSender(sender)` | `<P>(sender: HyperSender<...>) => this` | Register a sender. |
-| `getReceiver(protocol)` | `<P>(protocol: P) => HyperReceiver<...> \| undefined` | Look up a receiver. |
-| `registerReceiver(receiver)` | `<P>(receiver: HyperReceiver<...>) => this` | Register a receiver. |
-| `getProtocol(protocol)` | `<P>(protocol: P) => HyperProtocol<...> \| undefined` | Look up a protocol module. |
-| `registerProtocol(protocol)` | `<P>(protocol: HyperProtocol<...>) => this` | Register a protocol module. |
+| `getSender(protocol)` | `<P>(protocol: P) => AnyHyperSender<P> \| undefined` | Look up a sender. |
+| `registerSender(sender)` | `<P>(sender: AnyHyperSender<P>) => this` | Register a sender. |
+| `getReceiver(protocol)` | `<P>(protocol: P) => AnyHyperReceiver<P> \| undefined` | Look up a receiver. |
+| `registerReceiver(receiver)` | `<P>(receiver: AnyHyperReceiver<P>) => this` | Register a receiver. |
+| `getProtocol(protocol)` | `<P>(protocol: P) => AnyHyperProtocol<P> \| undefined` | Look up a protocol module. |
+| `registerProtocol(protocol)` | `<P>(protocol: AnyHyperProtocol<P>) => this` | Register a protocol module. |
 | `listen(options)` | `<P>(options: HyperServerListenOptions<P>) => Promise<TransportServer>` | Start a protocol server. |
 | `use(plugin)` | `(plugin: HyperPlugin) => this` | Register a plugin. |
 | `extend(options)` | `(options: Partial<HyperClientOptions>) => IHyperCore` | Create a client with merged options. |
@@ -338,7 +338,7 @@ All declarations below are re-exported from `@hyperttp/types`.
 The primary `send()` overload is:
 
 ```ts
-send<P extends SenderProtocol, TOutput = unknown>(
+send<TOutput = unknown, P extends SenderProtocol = SenderProtocol>(
   request: SendRequest<InferProtocolInput<P>, P>,
 ): Promise<UniversalResponse<TOutput>>;
 ```
@@ -346,7 +346,7 @@ send<P extends SenderProtocol, TOutput = unknown>(
 A generic fallback is also available:
 
 ```ts
-send<TInput = unknown, TOutput = unknown, P extends string = string>(
+send<TInput = unknown, TOutput = unknown, P extends SenderProtocol = SenderProtocol>(
   request: SendRequest<TInput, P>,
 ): Promise<UniversalResponse<TOutput>>;
 ```
@@ -450,6 +450,17 @@ A sender has the following members:
 | `send` | `(prepared: TPrepared, transport: HyperTransport, ctx: RequestContext) => Promise<TRaw>` | Execute through a transport. |
 | `parse` | `(raw: TRaw, ctx: RequestContext) => UniversalResponse<TOutput> \| Promise<UniversalResponse<TOutput>>` | Normalize the raw response. |
 
+#### `AnyHyperSender<P>`
+
+```ts
+type AnyHyperSender<P extends SenderProtocol = SenderProtocol> =
+  HyperSender<any, any, any, any, P>;
+```
+
+Use this compatibility alias at registration and configuration boundaries when the sender has
+concrete, protocol-specific lifecycle types. It retains the protocol identifier while avoiding
+strict function-variance incompatibilities caused by `unknown` input and raw types.
+
 #### `SenderRegistry`
 
 ```ts
@@ -510,6 +521,16 @@ Extends `RequestContext` with transport-dependent server information:
 | `handle` | `(request: TRequest, ctx: ServerRequestContext) => TResponse \| Promise<TResponse>` | Run application logic. |
 | `respond` | `(response: TResponse, ctx: ServerRequestContext) => TRawResponse \| Promise<TRawResponse>` | Serialize the protocol response. |
 
+#### `AnyHyperReceiver<P>`
+
+```ts
+type AnyHyperReceiver<P extends SenderProtocol = SenderProtocol> =
+  HyperReceiver<any, any, any, any, P>;
+```
+
+`IHyperCore.registerReceiver()` and `BaseHyperClientOptions.receivers` use this alias to accept
+receivers with concrete protocol request and response types.
+
 #### `ReceiverRegistry`
 
 `ReceiverRegistry` mirrors `SenderRegistry` with `register`, `get`, `has`, and readonly `size`.
@@ -525,7 +546,18 @@ A protocol module contains:
 - a `sender`, a `receiver`, or both.
 
 The generic module types connect the client sender and server receiver to the same protocol
-identifier. `ProtocolRegistry` provides `register`, `get`, `has`, and readonly `size` methods.
+identifier.
+
+#### `AnyHyperProtocol<P>`
+
+```ts
+type AnyHyperProtocol<P extends SenderProtocol = SenderProtocol> =
+  HyperProtocol<any, any, any, any, P>;
+```
+
+This compatibility alias is used by `IHyperCore` registration and lookup methods,
+`BaseHyperClientOptions.protocols`, and `ProtocolRegistry`. `ProtocolRegistry` provides
+`register`, `get`, `has`, and readonly `size` methods.
 
 ### Client options
 
@@ -539,11 +571,11 @@ type LogLevel = "debug" | "info" | "warn" | "error";
 
 | Option | Type | Description |
 | --- | --- | --- |
-| `protocols` | `HyperProtocol[] \| undefined` | Protocol modules to register. |
-| `senders` | `HyperSender[] \| undefined` | Senders to register. |
-| `receivers` | `HyperReceiver[] \| undefined` | Receivers to register. |
+| `protocols` | `AnyHyperProtocol[] \| undefined` | Protocol modules to register. |
+| `senders` | `AnyHyperSender[] \| undefined` | Senders to register. |
+| `receivers` | `AnyHyperReceiver[] \| undefined` | Receivers to register. |
 | `customTransport` | `HyperTransport \| undefined` | Custom low-level transport. |
-| `customSender` | `HyperSender \| undefined` | Custom sender. |
+| `customSender` | `AnyHyperSender \| undefined` | Custom sender. |
 | `retry` | `Partial<RetryOptions> \| undefined` | Retry configuration overrides. |
 | `logger` | `(level: LogLevel, message: string, meta?: unknown) => void` | Custom logger. |
 | `verbose` | `boolean \| undefined` | Enable verbose logging. |

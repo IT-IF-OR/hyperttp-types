@@ -5,6 +5,28 @@ All notable changes to `@hyperttp/types` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.2] - 2026-09-09
+
+### Added
+
+- `AnyHyperSender<P>`, `AnyHyperReceiver<P>`, and `AnyHyperProtocol<P>` compatibility
+  aliases for registering protocol components with concrete input, output, prepared, and raw types.
+
+### Changed
+
+- `IHyperCore` sender, receiver, and protocol lookup/registration APIs now use the
+  corresponding `AnyHyper*` aliases instead of `unknown`-parameterized component types.
+- `BaseHyperClientOptions.protocols`, `senders`, `receivers`, and `customSender` now
+  accept the corresponding `AnyHyper*` aliases, preserving assignability for concrete
+  protocol implementations under strict function variance.
+- `SenderRegistry`, `ReceiverRegistry`, and `ProtocolRegistry` now use the matching
+  `AnyHyper*` aliases for their `register()` and `get()` contracts.
+- `IHyperCore.send()` overload generics were reordered and given protocol-aware defaults:
+  the inferred overload now accepts `TOutput` first, and the explicit overload defaults
+  its protocol parameter to `SenderProtocol`.
+- Expanded bilingual JSDoc for both `send()` overloads with guidance and examples for
+  augmented and custom protocols.
+
 ## [0.4.1] - 2026-09-09
 
 ### Changed

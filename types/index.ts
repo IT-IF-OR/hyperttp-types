@@ -1,13 +1,13 @@
 import type { HyperClientOptions } from "./options.js";
 import type { HyperPlugin } from "./plugin.js";
-import type { HyperProtocol } from "./protocol.js";
-import type { HyperReceiver, HyperServerListenOptions } from "./receiver.js";
+import type { AnyHyperProtocol } from "./protocol.js";
+import type { AnyHyperReceiver, HyperServerListenOptions } from "./receiver.js";
 import type {
-  HyperSender,
   SenderProtocol,
   SendRequest,
   UniversalResponse,
   InferProtocolInput,
+  AnyHyperSender,
 } from "./sender.js";
 import type { TransportServer } from "./transport.js";
 
@@ -43,19 +43,55 @@ export interface IHyperCore extends HyperProtocols {
   getTransportName(): Promise<string>;
 
   /**
-   * @ru Универсальный метод отправки запроса через зарегистрированные сендеры.
-   * @en Universal dispatch method that routes a request to the registered sender.
-   * @template TInput - The type of the request input.
-   * @template TOutput - The type of the response data.
-   * @template P - The protocol identifier.
+   * @ru Отправляет запрос через зарегистрированный sender и автоматически выводит
+   * тип входных данных из `ProtocolInputMap` по идентификатору протокола.
+   * Используйте этот overload для протоколов, добавленных через Module Augmentation.
+   *
+   * @en Dispatches a request through a registered sender and automatically infers
+   * the input type from `ProtocolInputMap` by protocol identifier.
+   * Use this overload for protocols added through Module Augmentation.
+   *
+   * @example
+   * const response = await core.send<{ id: string }>({
+   *   protocol: "rest",
+   *   input: { method: "GET", url: "https://api.example.test/users/1" },
+   * });
+   *
+   * @template TOutput - The normalized response data type.
+   * @template P - The protocol identifier inferred from `req.protocol`.
    * @param req - The universal request being dispatched.
-   * @returns A promise resolving to the universal response.
+   * @returns A promise resolving to the normalized universal response.
    */
-  send<P extends SenderProtocol, TOutput = unknown>(
+  send<TOutput = unknown, P extends SenderProtocol = SenderProtocol>(
     req: SendRequest<InferProtocolInput<P>, P>,
   ): Promise<UniversalResponse<TOutput>>;
 
-  send<TInput = unknown, TOutput = unknown, P extends string = string>(
+  /**
+   * @ru Отправляет запрос через зарегистрированный sender с явно указанным типом
+   * входных данных. Используйте для custom-протоколов без записи в `ProtocolInputMap`
+   * либо когда тип входа требуется задать вручную.
+   *
+   * @en Dispatches a request through a registered sender with an explicitly
+   * specified input type. Use this overload for custom protocols that do not
+   * augment `ProtocolInputMap`, or when the input type must be provided manually.
+   *
+   * @example
+   * interface RpcInput {
+   *   method: "ping";
+   * }
+   *
+   * const response = await core.send<RpcInput, { pong: true }, "rpc">({
+   *   protocol: "rpc",
+   *   input: { method: "ping" },
+   * });
+   *
+   * @template TInput - The explicit protocol request input type.
+   * @template TOutput - The normalized response data type.
+   * @template P - The protocol identifier.
+   * @param req - The universal request being dispatched.
+   * @returns A promise resolving to the normalized universal response.
+   */
+  send<TInput = unknown, TOutput = unknown, P extends SenderProtocol = SenderProtocol>(
     req: SendRequest<TInput, P>,
   ): Promise<UniversalResponse<TOutput>>;
 
@@ -66,9 +102,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param protocol - The protocol identifier.
    * @returns The sender, or undefined if the protocol is not registered.
    */
-  getSender<P extends SenderProtocol>(
-    protocol: P,
-  ): HyperSender<unknown, unknown, unknown, unknown, P> | undefined;
+  getSender<P extends SenderProtocol>(protocol: P): AnyHyperSender<P> | undefined;
 
   /**
    * @ru Регистрирует сендер в ядре.
@@ -76,9 +110,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param sender - The sender to register.
    * @returns The current instance for chaining.
    */
-  registerSender<P extends SenderProtocol>(
-    sender: HyperSender<unknown, unknown, unknown, unknown, P>,
-  ): this;
+  registerSender<P extends SenderProtocol>(sender: AnyHyperSender<P>): this;
 
   /**
    * @ru Возвращает зарегистрированный ресивер для указанного протокола.
@@ -87,9 +119,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param protocol - The protocol identifier.
    * @returns The receiver, or undefined if the protocol is not registered.
    */
-  getReceiver<P extends SenderProtocol>(
-    protocol: P,
-  ): HyperReceiver<unknown, unknown, unknown, unknown, P> | undefined;
+  getReceiver<P extends SenderProtocol>(protocol: P): AnyHyperReceiver<P> | undefined;
 
   /**
    * @ru Регистрирует ресивер в ядре (серверная сторона).
@@ -97,9 +127,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param receiver - The receiver to register.
    * @returns The current instance for chaining.
    */
-  registerReceiver<P extends SenderProtocol>(
-    receiver: HyperReceiver<unknown, unknown, unknown, unknown, P>,
-  ): this;
+  registerReceiver<P extends SenderProtocol>(receiver: AnyHyperReceiver<P>): this;
 
   /**
    * @ru Возвращает зарегистрированный модуль протокола.
@@ -108,9 +136,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param protocol - The protocol identifier.
    * @returns The protocol module, or undefined if the protocol is not registered.
    */
-  getProtocol<P extends SenderProtocol>(
-    protocol: P,
-  ): HyperProtocol<unknown, unknown, unknown, unknown, P> | undefined;
+  getProtocol<P extends SenderProtocol>(protocol: P): AnyHyperProtocol<P> | undefined;
 
   /**
    * @ru Регистрирует модуль протокола и его доступные sender и/или receiver.
@@ -118,9 +144,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param protocol - The protocol module to register.
    * @returns The current instance for chaining.
    */
-  registerProtocol<P extends SenderProtocol>(
-    protocol: HyperProtocol<unknown, unknown, unknown, unknown, P>,
-  ): this;
+  registerProtocol<P extends SenderProtocol>(protocol: AnyHyperProtocol<P>): this;
 
   /**
    * @ru Запускает сервер для указанного протокола. Связывает транспорт, ресивер и application handler.

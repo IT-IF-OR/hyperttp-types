@@ -140,6 +140,14 @@ export interface HyperReceiver<
   respond(response: TResponse, ctx: ServerRequestContext): TRawResponse | Promise<TRawResponse>;
 }
 
+export type AnyHyperReceiver<P extends SenderProtocol = SenderProtocol> = HyperReceiver<
+  any,
+  any,
+  any,
+  any,
+  P
+>;
+
 /**
  * @ru Контракт реестра ресиверов для управления зарегистрированными ресиверами.
  * @en Receiver registry contract for managing registered receivers.

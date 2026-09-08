@@ -30,6 +30,14 @@ export type HyperProtocol<
       }
   );
 
+export type AnyHyperProtocol<P extends SenderProtocol = SenderProtocol> = HyperProtocol<
+  any,
+  any,
+  any,
+  any,
+  P
+>;
+
 /**
  * @ru Общие свойства модуля протокола.
  * @en Common protocol module properties.
@@ -61,9 +69,7 @@ export interface ProtocolRegistry {
    * @en Registers a protocol in the registry.
    * @param protocol - The protocol module to register.
    */
-  register<P extends SenderProtocol>(
-    protocol: HyperProtocol<unknown, unknown, unknown, unknown, P>,
-  ): void;
+  register<P extends SenderProtocol>(protocol: AnyHyperProtocol<P>): void;
 
   /**
    * @ru Возвращает протокол по идентификатору.
@@ -71,9 +77,7 @@ export interface ProtocolRegistry {
    * @param protocol - The protocol identifier.
    * @returns The protocol module, or undefined if not registered.
    */
-  get<P extends SenderProtocol>(
-    protocol: P,
-  ): HyperProtocol<unknown, unknown, unknown, unknown, P> | undefined;
+  get<P extends SenderProtocol>(protocol: P): AnyHyperProtocol<P> | undefined;
 
   /**
    * @ru Проверяет, зарегистрирован ли протокол.
