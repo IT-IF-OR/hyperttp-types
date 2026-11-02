@@ -1,5 +1,11 @@
 import type { HyperReceiver } from "./receiver.js";
-import type { HyperSender, SenderProtocol } from "./sender.js";
+import type { HyperSender, ProtocolInputMap } from "./sender.js";
+
+/**
+ * @ru Нейтральный идентификатор протокола, общий для sender, receiver и transport контрактов.
+ * @en Protocol-neutral identifier shared by sender, receiver, and transport contracts.
+ */
+export type HyperProtocolName = keyof ProtocolInputMap | (string & {});
 
 /**
  * @ru Единый модуль протокола, объединяющий клиентский Sender и серверный Receiver.
@@ -17,20 +23,20 @@ export type HyperProtocol<
   TOutput = unknown,
   TReq = unknown,
   TRes = unknown,
-  P extends SenderProtocol = SenderProtocol,
+  P extends HyperProtocolName = HyperProtocolName,
 > = HyperProtocolIdentity<P> &
   (
     | {
-        readonly sender: HyperSender<TInput, TOutput, unknown, unknown, P>;
-        readonly receiver?: HyperReceiver<TReq, TRes, unknown, unknown, P>;
+        readonly sender: HyperSender<TInput, TOutput, any, any, P>;
+        readonly receiver?: HyperReceiver<TReq, TRes, any, any, P>;
       }
     | {
-        readonly sender?: HyperSender<TInput, TOutput, unknown, unknown, P>;
-        readonly receiver: HyperReceiver<TReq, TRes, unknown, unknown, P>;
+        readonly sender?: HyperSender<TInput, TOutput, any, any, P>;
+        readonly receiver: HyperReceiver<TReq, TRes, any, any, P>;
       }
   );
 
-export type AnyHyperProtocol<P extends SenderProtocol = SenderProtocol> = HyperProtocol<
+export type AnyHyperProtocol<P extends HyperProtocolName = HyperProtocolName> = HyperProtocol<
   any,
   any,
   any,
@@ -43,7 +49,7 @@ export type AnyHyperProtocol<P extends SenderProtocol = SenderProtocol> = HyperP
  * @en Common protocol module properties.
  * @template P - The protocol identifier.
  */
-interface HyperProtocolIdentity<P extends SenderProtocol> {
+interface HyperProtocolIdentity<P extends HyperProtocolName> {
   /**
    * @ru Идентификатор протокола (например, 'rest', 'grpc', 'ws').
    * @en Protocol identifier (e.g. 'rest', 'grpc', 'ws').
@@ -69,7 +75,7 @@ export interface ProtocolRegistry {
    * @en Registers a protocol in the registry.
    * @param protocol - The protocol module to register.
    */
-  register<P extends SenderProtocol>(protocol: AnyHyperProtocol<P>): void;
+  register<P extends HyperProtocolName>(protocol: AnyHyperProtocol<P>): void;
 
   /**
    * @ru Возвращает протокол по идентификатору.
@@ -77,7 +83,7 @@ export interface ProtocolRegistry {
    * @param protocol - The protocol identifier.
    * @returns The protocol module, or undefined if not registered.
    */
-  get<P extends SenderProtocol>(protocol: P): AnyHyperProtocol<P> | undefined;
+  get<P extends HyperProtocolName>(protocol: P): AnyHyperProtocol<P> | undefined;
 
   /**
    * @ru Проверяет, зарегистрирован ли протокол.
@@ -85,7 +91,7 @@ export interface ProtocolRegistry {
    * @param protocol - The protocol identifier.
    * @returns true if the protocol is registered.
    */
-  has(protocol: SenderProtocol): boolean;
+  has(protocol: HyperProtocolName): boolean;
 
   /**
    * @ru Количество зарегистрированных протоколов.

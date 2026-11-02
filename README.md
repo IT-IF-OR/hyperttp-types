@@ -191,6 +191,25 @@ const sender = {
 `HyperMethod` and `HyperMethodSurface` describe this dynamic plugin boundary. The actual
 method signatures remain protocol-specific and should be declared by the protocol package.
 
+### Request finalization
+
+`RequestContext` optionally exposes two runtime-provided hooks:
+
+- `onSettled(callback)` registers a synchronous or asynchronous callback invoked once per
+  logical request, after all blocking response and recovery handlers have completed.
+  Registration during or after finalization is rejected. Callback errors are diagnostic
+  only: they cannot change the finalized request outcome.
+- `acceptFinalResponse(response)` accepts an already finalized response for a follower
+  request without repeating blocking or background response transforms. It preserves the
+  response data type and performs no network I/O.
+
+Settlement callbacks receive the exported discriminated union `RequestOutcome`:
+`{ readonly ok: true; readonly response: UniversalResponse }` or
+`{ readonly ok: false; readonly error: unknown }`. Its `ok` discriminant describes whether
+the logical request resolved or rejected, not the protocol-specific `response.ok` value.
+Both hooks are optional so existing context implementations remain compatible; callers
+must check availability before using them.
+
 ## Transport contract
 
 `HyperTransport` is deliberately protocol-neutral:
@@ -318,9 +337,9 @@ All declarations below are re-exported from `@hyperttp/types`.
 | Member | Type | Purpose |
 | --- | --- | --- |
 | `config` | `HyperClientOptions` | Immutable client configuration. |
-| `getProtocolName(protocol?)` | `<P extends SenderProtocol = SenderProtocol>(protocol?: P) => Promise<string>` | Resolve the registered protocol name. |
-| `getSenderName(protocol?)` | `<P extends SenderProtocol = SenderProtocol>(protocol?: P) => Promise<string>` | Resolve the sender name. |
-| `getReceiverName(protocol?)` | `<P extends SenderProtocol = SenderProtocol>(protocol?: P) => Promise<string>` | Resolve the receiver name. |
+| `getProtocolName(protocol?)` | `<P extends HyperProtocolName = HyperProtocolName>(protocol?: P) => Promise<string>` | Resolve the registered protocol name. |
+| `getSenderName(protocol?)` | `<P extends HyperProtocolName = HyperProtocolName>(protocol?: P) => Promise<string>` | Resolve the sender name. |
+| `getReceiverName(protocol?)` | `<P extends HyperProtocolName = HyperProtocolName>(protocol?: P) => Promise<string>` | Resolve the receiver name. |
 | `getTransportName()` | `() => Promise<string>` | Resolve the transport name. |
 | `send(request)` | Typed overloads | Dispatch a protocol request. |
 | `getSender(protocol)` | `<P>(protocol: P) => AnyHyperSender<P> \| undefined` | Look up a sender. |
@@ -338,7 +357,7 @@ All declarations below are re-exported from `@hyperttp/types`.
 The primary `send()` overload is:
 
 ```ts
-send<TOutput = unknown, P extends SenderProtocol = SenderProtocol>(
+send<TOutput = unknown, P extends HyperProtocolName = HyperProtocolName>(
   request: SendRequest<InferProtocolInput<P>, P>,
 ): Promise<UniversalResponse<TOutput>>;
 ```
@@ -346,20 +365,30 @@ send<TOutput = unknown, P extends SenderProtocol = SenderProtocol>(
 A generic fallback is also available:
 
 ```ts
-send<TInput = unknown, TOutput = unknown, P extends SenderProtocol = SenderProtocol>(
+send<TInput = unknown, TOutput = unknown, P extends HyperProtocolName = HyperProtocolName>(
   request: SendRequest<TInput, P>,
 ): Promise<UniversalResponse<TOutput>>;
 ```
 
 ### Sender types
 
-#### `SenderProtocol`
+#### `HyperProtocolName`
 
 ```ts
-type SenderProtocol = keyof ProtocolInputMap | (string & {});
+type HyperProtocolName = keyof ProtocolInputMap | (string & {});
 ```
 
 It allows known augmented protocol keys as well as arbitrary custom strings.
+
+#### `SenderProtocol` (deprecated)
+
+```ts
+/** @deprecated Use HyperProtocolName instead. */
+type SenderProtocol = HyperProtocolName;
+```
+
+`HyperProtocolName` is the canonical protocol identifier shared by senders, receivers, protocol
+modules, and transports. `SenderProtocol` remains available as a deprecated compatibility alias.
 
 #### `ProtocolInputMap` and `ProtocolMetadataMap`
 
@@ -418,7 +447,7 @@ Normalized protocol-neutral response:
 
 | Property | Type | Description |
 | --- | --- | --- |
-| `protocol` | `SenderProtocol` | Protocol that handled the request. |
+| `protocol` | `HyperProtocolName` | Protocol that handled the request. |
 | `ok` | `boolean` | Protocol-defined success flag. |
 | `status` | `number` | Numeric status. |
 | `statusText` | `string \| undefined` | Status description. |
@@ -453,7 +482,7 @@ A sender has the following members:
 #### `AnyHyperSender<P>`
 
 ```ts
-type AnyHyperSender<P extends SenderProtocol = SenderProtocol> =
+type AnyHyperSender<P extends HyperProtocolName = HyperProtocolName> =
   HyperSender<any, any, any, any, P>;
 ```
 
@@ -465,9 +494,9 @@ strict function-variance incompatibilities caused by `unknown` input and raw typ
 
 ```ts
 interface SenderRegistry {
-  register<P extends SenderProtocol>(sender: HyperSender<unknown, unknown, unknown, unknown, P>): void;
-  get<P extends SenderProtocol>(protocol: P): HyperSender<unknown, unknown, unknown, unknown, P> | undefined;
-  has(protocol: SenderProtocol): boolean;
+  register<P extends HyperProtocolName>(sender: AnyHyperSender<P>): void;
+  get<P extends HyperProtocolName>(protocol: P): AnyHyperSender<P> | undefined;
+  has(protocol: HyperProtocolName): boolean;
   readonly size: number;
 }
 ```
@@ -524,7 +553,7 @@ Extends `RequestContext` with transport-dependent server information:
 #### `AnyHyperReceiver<P>`
 
 ```ts
-type AnyHyperReceiver<P extends SenderProtocol = SenderProtocol> =
+type AnyHyperReceiver<P extends HyperProtocolName = HyperProtocolName> =
   HyperReceiver<any, any, any, any, P>;
 ```
 
@@ -534,8 +563,20 @@ receivers with concrete protocol request and response types.
 #### `ReceiverRegistry`
 
 `ReceiverRegistry` mirrors `SenderRegistry` with `register`, `get`, `has`, and readonly `size`.
+Its `register()` and `get()` methods use `AnyHyperReceiver<P>` to preserve assignability of
+receivers with concrete request, response, and raw transport types.
 
 ### Protocol modules
+
+#### `HyperProtocolName`
+
+```ts
+type HyperProtocolName = keyof ProtocolInputMap | (string & {});
+```
+
+A protocol-neutral name for the shared protocol identifier used by sender, receiver, and
+transport contracts. Use it in new cross-layer or server-side APIs instead of exposing the
+sender-oriented alias directly.
 
 #### `HyperProtocol<TInput, TOutput, TReq, TRes, P>`
 
@@ -545,13 +586,13 @@ A protocol module contains:
 - an optional display `name`;
 - a `sender`, a `receiver`, or both.
 
-The generic module types connect the client sender and server receiver to the same protocol
-identifier.
+The `sender` and `receiver` slots preserve concrete prepared/raw transport types, so protocol
+modules containing fully typed components remain assignable at registration boundaries.
 
 #### `AnyHyperProtocol<P>`
 
 ```ts
-type AnyHyperProtocol<P extends SenderProtocol = SenderProtocol> =
+type AnyHyperProtocol<P extends HyperProtocolName = HyperProtocolName> =
   HyperProtocol<any, any, any, any, P>;
 ```
 
@@ -602,7 +643,14 @@ interface PluginContext {
   readonly config: HyperClientOptions;
   readonly core: IHyperCore;
 }
+
+interface ServerPluginContext extends ServerRequestContext {
+  readonly protocol: HyperProtocolName;
+}
 ```
+
+`ServerPluginContext` is supplied to server lifecycle hooks. Its `protocol` identifies the
+protocol bound by `listen()`, rather than a property inferred from raw transport input.
 
 #### `PluginOnRequestResult<TInput, TOutput>`
 
@@ -627,6 +675,46 @@ A plugin has `name`, optional `phase` and `mode`, and optional hooks:
 
 `reqCtx` is the per-request `RequestContext`, allowing plugins to share `state` and `meta`
 across lifecycle phases.
+
+#### Server plugin hooks
+
+`ServerPluginContext extends ServerRequestContext` adds `readonly protocol: HyperProtocolName`.
+The protocol comes from the `listen()` binding, not untrusted raw input. The same context
+shares `state` and `meta` across the incoming request lifecycle.
+
+`ServerRequestOutcome` is an exported discriminated union using a **raw transport response**,
+not `UniversalResponse`:
+
+```ts
+type ServerRequestOutcome =
+  | { readonly ok: true; readonly response: TransportResponse }
+  | { readonly ok: false; readonly error: unknown };
+```
+
+`HyperPlugin` also provides these optional server hooks. All arguments are required when
+invoking a hook; `MaybePromise<T>` below means `T | Promise<T>` (an internal type alias).
+
+| Hook | Signature |
+| --- | --- |
+| `onServerRequest` | `(request: TransportRequest, ctx: PluginContext, requestCtx: ServerPluginContext) => MaybePromise<TransportRequest \| void>` |
+| `onServerResponse` | `(response: TransportResponse, request: TransportRequest, ctx: PluginContext, requestCtx: ServerPluginContext) => MaybePromise<TransportResponse \| void>` |
+| `onServerError` | `(error: unknown, request: TransportRequest, ctx: PluginContext, requestCtx: ServerPluginContext) => MaybePromise<TransportResponse \| void>` |
+| `onServerSettled` | `(outcome: ServerRequestOutcome, request: TransportRequest, ctx: PluginContext, requestCtx: ServerPluginContext) => MaybePromise<void>` |
+
+- Server hooks are always awaited/blocking, independently of the plugin's client `mode`.
+  Every server hook runs in forward phase order:
+  `START → PREPARE → CONTROL → FORMAT → NETWORK → DATA`, including response, error,
+  and settlement hooks (no reverse unwinding).
+- `onServerRequest` sees raw incoming input before `receiver.receive()` and may replace it.
+- `onServerResponse` sees the serialized raw output after `receiver.respond()` and before
+  it is handed to the transport; it may replace that output.
+- All `onServerError` hooks are attempted; the first returned raw `TransportResponse`
+  recovers the failure. Returning `void` does not recover it.
+- `onServerSettled` runs exactly once per incoming request after response preparation or
+  recovery, including an unrecovered failure. It does **not** confirm physical delivery
+  to the peer. Settlement errors are diagnostic only and cannot change the outcome.
+- Client hooks and client authentication are not automatically applied to incoming
+  requests; implement server-side authentication explicitly in the server lifecycle.
 
 ### Retry and errors
 
@@ -698,7 +786,7 @@ Adapters translate `IHyperCore` into a third-party client shape such as Axios, K
 | `headers` | `Readonly<Record<string, string \| string[]>>` |
 | `body` | `unknown \| undefined` |
 | `signal` | `AbortSignal \| undefined` |
-| `protocol` | `SenderProtocol` |
+| `protocol` | `HyperProtocolName` |
 | `stream` | `boolean \| undefined` |
 | `followRedirects` | `boolean \| undefined` |
 | `maxRedirects` | `number \| undefined` |
@@ -740,8 +828,8 @@ interface TransportServer {
 
 | Member | Type |
 | --- | --- |
-| `protocols` | `readonly SenderProtocol[] \| undefined` |
-| `supports` | `(protocol: SenderProtocol) => boolean` (optional) |
+| `protocols` | `readonly HyperProtocolName[] \| undefined` |
+| `supports` | `(protocol: HyperProtocolName) => boolean` (optional) |
 | `execute` | `(request: TransportRequest) => Promise<TransportResponse>` |
 | `listen` | `(options: TransportListenOptions) => Promise<TransportServer>` (optional) |
 | `close` | `() => Promise<void> \| void` (optional) |

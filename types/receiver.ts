@@ -1,4 +1,5 @@
-import type { RequestContext, SenderProtocol } from "./sender.js";
+import type { HyperProtocolName } from "./protocol.js";
+import type { RequestContext } from "./sender.js";
 
 /**
  * @ru Контекст серверного запроса. Расширяет общий `RequestContext` информацией о соединении и пире.
@@ -49,7 +50,7 @@ export interface ServerRequestContext extends RequestContext {
  * @template TResponse - The type of the protocol response.
  */
 export interface HyperServerListenOptions<
-  P extends SenderProtocol = SenderProtocol,
+  P extends HyperProtocolName = HyperProtocolName,
   TRequest = InferProtocolServerRequest<P>,
   TResponse = InferProtocolServerResponse<P>,
 > {
@@ -104,7 +105,7 @@ export interface HyperReceiver<
   TResponse = unknown,
   TRawRequest = unknown,
   TRawResponse = unknown,
-  P extends SenderProtocol = SenderProtocol,
+  P extends HyperProtocolName = HyperProtocolName,
 > {
   /**
    * @ru Идентификатор протокола, который обслуживает ресивер.
@@ -140,7 +141,7 @@ export interface HyperReceiver<
   respond(response: TResponse, ctx: ServerRequestContext): TRawResponse | Promise<TRawResponse>;
 }
 
-export type AnyHyperReceiver<P extends SenderProtocol = SenderProtocol> = HyperReceiver<
+export type AnyHyperReceiver<P extends HyperProtocolName = HyperProtocolName> = HyperReceiver<
   any,
   any,
   any,
@@ -158,9 +159,7 @@ export interface ReceiverRegistry {
    * @en Registers a receiver in the registry.
    * @param receiver - The receiver to register.
    */
-  register<P extends SenderProtocol>(
-    receiver: HyperReceiver<unknown, unknown, unknown, unknown, P>,
-  ): void;
+  register<P extends HyperProtocolName>(receiver: AnyHyperReceiver<P>): void;
 
   /**
    * @ru Возвращает ресивер по идентификатору протокола.
@@ -168,9 +167,7 @@ export interface ReceiverRegistry {
    * @param protocol - The protocol identifier.
    * @returns The receiver, or undefined if the protocol is not registered.
    */
-  get<P extends SenderProtocol>(
-    protocol: P,
-  ): HyperReceiver<unknown, unknown, unknown, unknown, P> | undefined;
+  get<P extends HyperProtocolName>(protocol: P): AnyHyperReceiver<P> | undefined;
 
   /**
    * @ru Проверяет, зарегистрирован ли протокол.
@@ -178,7 +175,7 @@ export interface ReceiverRegistry {
    * @param protocol - The protocol identifier.
    * @returns true if the protocol is registered.
    */
-  has(protocol: SenderProtocol): boolean;
+  has(protocol: HyperProtocolName): boolean;
 
   /**
    * @ru Количество зарегистрированных ресиверов.

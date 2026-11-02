@@ -1,6 +1,12 @@
 import type { IHyperCore } from "./index.js";
 import type { HyperClientOptions } from "./options.js";
+import type { HyperProtocolName } from "./protocol.js";
+import type { ServerRequestContext } from "./receiver.js";
 import type { RequestContext, SendRequest, UniversalResponse } from "./sender.js";
+import type { TransportRequest, TransportResponse } from "./transport.js";
+
+/** Creates a fresh plugin instance for each core, including extend() and create(). */
+export type CorePluginFactory = () => HyperPlugin;
 
 /**
  * @ru Фазы выполнения, доступные для перехвата плагином в конвейере запроса.
@@ -33,6 +39,24 @@ export interface PluginContext {
 }
 
 /**
+ * @ru Общий контекст входящего запроса; protocol задан привязкой listen, а не сырым вводом.
+ * @en Shared incoming request context; protocol is the listen binding, not raw input.
+ */
+export interface ServerPluginContext extends ServerRequestContext {
+  readonly protocol: HyperProtocolName;
+}
+
+/**
+ * @ru Результат подготовки ответа, а не подтверждение физической доставки клиенту.
+ * @en Final response preparation result, not confirmation of physical delivery to the peer.
+ */
+export type ServerRequestOutcome =
+  | { readonly ok: true; readonly response: TransportResponse }
+  | { readonly ok: false; readonly error: unknown };
+
+type MaybePromise<T> = T | Promise<T>;
+
+/**
  * @ru Результат выполнения хука `onRequest`: изменённый запрос, преждевременный ответ или отсутствие результата.
  * @en Result of the `onRequest` hook: a modified request, an early response, or no result.
  * @template TInput - The type of the request input.
@@ -46,6 +70,9 @@ export type PluginOnRequestResult<TInput = unknown, TOutput = unknown> =
 /**
  * @ru Протокол-независимые хуки жизненного цикла плагинов.
  * @en Protocol-agnostic plugin lifecycle hooks.
+ * Server hooks are always blocking, independent of the client mode, and all run in forward
+ * phase order (START → PREPARE → CONTROL → FORMAT → NETWORK → DATA).
+ * Client hooks and client authentication are not automatically applied to incoming requests.
  * @template TInput - The type of the request input.
  * @template TOutput - The type of the response data.
  */
@@ -55,6 +82,14 @@ export interface HyperPlugin<TInput = unknown, TOutput = unknown> {
    * @en Unique plugin name for debugging and deduplication.
    */
   readonly name: string;
+
+  /**
+   * @ru Явно разрешает совместное использование stateless-плагина несколькими ядрами.
+   * Плагины с shared: true не могут определять setup; для плагинов с состоянием используйте pluginFactories.
+   * @en Explicitly allows a stateless plugin instance to be reused across cores.
+   * Plugins with shared: true cannot define setup; use pluginFactories for stateful plugins.
+   */
+  readonly shared?: boolean;
 
   /**
    * @ru Фаза выполнения в конвейере запроса.
@@ -128,4 +163,47 @@ export interface HyperPlugin<TInput = unknown, TOutput = unknown> {
     ctx?: PluginContext,
     reqCtx?: RequestContext,
   ) => Promise<UniversalResponse<TOutput> | void> | UniversalResponse<TOutput> | void;
+
+  /**
+   * @ru До receiver.receive; возвращает новый сырой запрос или void. Всегда блокирующий.
+   * @en Before receiver.receive; return a replacement raw request or void. Always blocking.
+   */
+  onServerRequest?: (
+    request: TransportRequest,
+    ctx: PluginContext,
+    requestCtx: ServerPluginContext,
+  ) => MaybePromise<TransportRequest | void>;
+
+  /**
+   * @ru После receiver.respond, до передачи сериализованного ответа транспорту. Всегда блокирующий.
+   * @en After receiver.respond, before handing the serialized response to the transport. Always blocking.
+   */
+  onServerResponse?: (
+    response: TransportResponse,
+    request: TransportRequest,
+    ctx: PluginContext,
+    requestCtx: ServerPluginContext,
+  ) => MaybePromise<TransportResponse | void>;
+
+  /**
+   * @ru Вызываются все хуки ошибок; первый возвращённый сырой ответ восстанавливает выполнение.
+   * @en All error hooks are attempted; the first returned raw response recovers the failure.
+   */
+  onServerError?: (
+    error: unknown,
+    request: TransportRequest,
+    ctx: PluginContext,
+    requestCtx: ServerPluginContext,
+  ) => MaybePromise<TransportResponse | void>;
+
+  /**
+   * @ru Ровно один раз после подготовки/восстановления, не доставки; ошибки только диагностические.
+   * @en Exactly once after preparation/recovery, not physical delivery; errors are diagnostic only.
+   */
+  onServerSettled?: (
+    outcome: ServerRequestOutcome,
+    request: TransportRequest,
+    ctx: PluginContext,
+    requestCtx: ServerPluginContext,
+  ) => MaybePromise<void>;
 }

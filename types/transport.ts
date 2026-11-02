@@ -1,4 +1,4 @@
-import type { SenderProtocol } from "./sender.js";
+import type { HyperProtocolName } from "./protocol.js";
 
 /**
  * @ru Запрос, выполняемый транспортом: минимальный сетевой конверт с методом, URL, заголовками, телом и контекстом выполнения.
@@ -39,7 +39,7 @@ export interface TransportRequest {
    * @ru Идентификатор протокола, от имени которого выполняется запрос.
    * @en Protocol identifier on behalf of which the request is executed.
    */
-  readonly protocol: SenderProtocol;
+  readonly protocol: HyperProtocolName;
 
   /** Whether the transport should expose the response as a stream when supported. */
   readonly stream?: boolean;
@@ -122,7 +122,7 @@ export interface HyperTransport {
    * @ru Список протоколов, поддерживаемых транспортом.
    * @en List of protocols supported by the transport.
    */
-  readonly protocols?: readonly SenderProtocol[];
+  readonly protocols?: readonly HyperProtocolName[];
 
   /**
    * @ru Проверяет поддержку протокола транспортом.
@@ -130,7 +130,7 @@ export interface HyperTransport {
    * @param protocol - The protocol identifier.
    * @returns true if the protocol is supported.
    */
-  supports?(protocol: SenderProtocol): boolean;
+  supports?(protocol: HyperProtocolName): boolean;
 
   /**
    * @ru Выполняет запрос и возвращает сырой ответ.

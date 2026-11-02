@@ -5,15 +5,51 @@ All notable changes to `@hyperttp/types` are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-11-03
+
+### Added
+
+- Exported `CorePluginFactory`; `HyperClientOptions.pluginFactories` now uses
+  this shared alias.
+- Exported `ServerPluginContext` extending `ServerRequestContext` with the listen-bound
+  `readonly protocol: HyperProtocolName`, and `ServerRequestOutcome` discriminating a raw
+  `TransportResponse` success from an unknown error.
+- Optional `HyperPlugin.onServerRequest`, `onServerResponse`, `onServerError`, and
+  `onServerSettled` hooks accepting synchronous or asynchronous results. Server hooks
+  always block independently of client mode and run in forward phase order: raw input
+  before receive, serialized output after respond, first raw error response for recovery,
+  and exactly-once settlement after preparation/recovery (not physical delivery), with
+  diagnostic-only settlement errors. Client hooks/authentication are not automatic on servers.
+- Exported `RequestOutcome` discriminated union for finalized logical request success or failure.
+- Optional `RequestContext.onSettled()` and `acceptFinalResponse()` hooks, documenting
+  once-per-logical-request settlement after blocking response/recovery, rejected late
+  registration, diagnostic-only callback errors, and reuse of finalized follower responses
+  without duplicate blocking/background response transforms or network I/O.
+
+### Changed
+
+- Adopted `HyperProtocolName` as the canonical protocol identifier across core,
+  sender, receiver, protocol, and transport contracts.
+  `SenderProtocol` remains available as a deprecated compatibility alias;
+  new code should use `HyperProtocolName`.
+- Sender/receiver registries now use the matching `AnyHyper*` aliases for `register()` and
+  `get()`, preserving assignability of concrete protocol component types.
+- `HyperProtocol` now preserves concrete sender/receiver prepared and raw transport types at
+  protocol-module registration boundaries.
+
 ## [0.4.2] - 2026-09-09
 
 ### Added
 
 - `AnyHyperSender<P>`, `AnyHyperReceiver<P>`, and `AnyHyperProtocol<P>` compatibility
   aliases for registering protocol components with concrete input, output, prepared, and raw types.
+- `HyperProtocolName`, a protocol-neutral alias for identifiers shared by sender, receiver,
+  and transport contracts.
 
 ### Changed
 
+- `ServerPluginContext.protocol` now uses the protocol-neutral `HyperProtocolName` alias
+  instead of the sender-oriented `SenderProtocol` name.
 - `IHyperCore` sender, receiver, and protocol lookup/registration APIs now use the
   corresponding `AnyHyper*` aliases instead of `unknown`-parameterized component types.
 - `BaseHyperClientOptions.protocols`, `senders`, `receivers`, and `customSender` now

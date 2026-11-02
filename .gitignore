@@ -6,8 +6,6 @@ yarn-debug.log*
 yarn-error.log*
 package-lock.json
 
-# Bun lockfile is committed for reproducible development and CI installs.
-
 # PNPM store
 .pnp/
 .pnpm-store/
@@ -47,3 +45,6 @@ coverage/
 
 # Serena
 .serena
+
+# Lock
+.lock

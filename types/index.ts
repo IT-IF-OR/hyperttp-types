@@ -1,9 +1,8 @@
 import type { HyperClientOptions } from "./options.js";
 import type { HyperPlugin } from "./plugin.js";
-import type { AnyHyperProtocol } from "./protocol.js";
+import type { AnyHyperProtocol, HyperProtocolName } from "./protocol.js";
 import type { AnyHyperReceiver, HyperServerListenOptions } from "./receiver.js";
 import type {
-  SenderProtocol,
   SendRequest,
   UniversalResponse,
   InferProtocolInput,
@@ -31,13 +30,13 @@ export interface IHyperCore extends HyperProtocols {
   readonly config: HyperClientOptions;
 
   /** Returns the registered protocol name, or the default protocol name. */
-  getProtocolName<P extends SenderProtocol = SenderProtocol>(protocol?: P): Promise<string>;
+  getProtocolName<P extends HyperProtocolName = HyperProtocolName>(protocol?: P): Promise<string>;
 
   /** Returns the registered sender name, or the default sender name. */
-  getSenderName<P extends SenderProtocol = SenderProtocol>(protocol?: P): Promise<string>;
+  getSenderName<P extends HyperProtocolName = HyperProtocolName>(protocol?: P): Promise<string>;
 
   /** Returns the registered receiver name, or the default receiver name. */
-  getReceiverName<P extends SenderProtocol = SenderProtocol>(protocol?: P): Promise<string>;
+  getReceiverName<P extends HyperProtocolName = HyperProtocolName>(protocol?: P): Promise<string>;
 
   /** Returns the configured transport name. */
   getTransportName(): Promise<string>;
@@ -62,7 +61,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param req - The universal request being dispatched.
    * @returns A promise resolving to the normalized universal response.
    */
-  send<TOutput = unknown, P extends SenderProtocol = SenderProtocol>(
+  send<TOutput = unknown, P extends HyperProtocolName = HyperProtocolName>(
     req: SendRequest<InferProtocolInput<P>, P>,
   ): Promise<UniversalResponse<TOutput>>;
 
@@ -91,7 +90,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param req - The universal request being dispatched.
    * @returns A promise resolving to the normalized universal response.
    */
-  send<TInput = unknown, TOutput = unknown, P extends SenderProtocol = SenderProtocol>(
+  send<TInput = unknown, TOutput = unknown, P extends HyperProtocolName = HyperProtocolName>(
     req: SendRequest<TInput, P>,
   ): Promise<UniversalResponse<TOutput>>;
 
@@ -102,7 +101,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param protocol - The protocol identifier.
    * @returns The sender, or undefined if the protocol is not registered.
    */
-  getSender<P extends SenderProtocol>(protocol: P): AnyHyperSender<P> | undefined;
+  getSender<P extends HyperProtocolName>(protocol: P): AnyHyperSender<P> | undefined;
 
   /**
    * @ru Регистрирует сендер в ядре.
@@ -110,7 +109,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param sender - The sender to register.
    * @returns The current instance for chaining.
    */
-  registerSender<P extends SenderProtocol>(sender: AnyHyperSender<P>): this;
+  registerSender<P extends HyperProtocolName>(sender: AnyHyperSender<P>): this;
 
   /**
    * @ru Возвращает зарегистрированный ресивер для указанного протокола.
@@ -119,7 +118,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param protocol - The protocol identifier.
    * @returns The receiver, or undefined if the protocol is not registered.
    */
-  getReceiver<P extends SenderProtocol>(protocol: P): AnyHyperReceiver<P> | undefined;
+  getReceiver<P extends HyperProtocolName>(protocol: P): AnyHyperReceiver<P> | undefined;
 
   /**
    * @ru Регистрирует ресивер в ядре (серверная сторона).
@@ -127,7 +126,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param receiver - The receiver to register.
    * @returns The current instance for chaining.
    */
-  registerReceiver<P extends SenderProtocol>(receiver: AnyHyperReceiver<P>): this;
+  registerReceiver<P extends HyperProtocolName>(receiver: AnyHyperReceiver<P>): this;
 
   /**
    * @ru Возвращает зарегистрированный модуль протокола.
@@ -136,7 +135,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param protocol - The protocol identifier.
    * @returns The protocol module, or undefined if the protocol is not registered.
    */
-  getProtocol<P extends SenderProtocol>(protocol: P): AnyHyperProtocol<P> | undefined;
+  getProtocol<P extends HyperProtocolName>(protocol: P): AnyHyperProtocol<P> | undefined;
 
   /**
    * @ru Регистрирует модуль протокола и его доступные sender и/или receiver.
@@ -144,7 +143,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param protocol - The protocol module to register.
    * @returns The current instance for chaining.
    */
-  registerProtocol<P extends SenderProtocol>(protocol: AnyHyperProtocol<P>): this;
+  registerProtocol<P extends HyperProtocolName>(protocol: AnyHyperProtocol<P>): this;
 
   /**
    * @ru Запускает сервер для указанного протокола. Связывает транспорт, ресивер и application handler.
@@ -153,7 +152,7 @@ export interface IHyperCore extends HyperProtocols {
    * @param options - The server listen options.
    * @returns A promise resolving to the transport server handle.
    */
-  listen<P extends SenderProtocol = SenderProtocol>(
+  listen<P extends HyperProtocolName = HyperProtocolName>(
     options: HyperServerListenOptions<P>,
   ): Promise<TransportServer>;
 

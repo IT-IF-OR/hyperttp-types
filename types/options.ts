@@ -1,4 +1,4 @@
-import type { HyperPlugin } from "./plugin.js";
+import type { CorePluginFactory, HyperPlugin } from "./plugin.js";
 import type { AnyHyperProtocol } from "./protocol.js";
 import type { AnyHyperReceiver } from "./receiver.js";
 import type { RetryOptions } from "./retry.js";
@@ -49,6 +49,18 @@ export interface BaseHyperClientOptions {
   customSender?: AnyHyperSender;
 
   /**
+   * @ru Кастомный ресивер протокола (серверная сторона); правила его использования определяются runtime-ядром.
+   * @en Custom protocol receiver (server side); usage rules are determined by the runtime core.
+   */
+  customReceiver?: AnyHyperReceiver;
+
+  /**
+   * @ru Кастомный модуль протокола, объединяющий сендер и/или ресивер.
+   * @en Custom protocol module combining sender and/or receiver.
+   */
+  customProtocol?: AnyHyperProtocol;
+
+  /**
    * @ru Переопределения конфигурации логики повторных попыток.
    * @en Retry logic configuration overrides.
    */
@@ -80,6 +92,14 @@ export interface BaseHyperClientOptions {
    * @en List of plugin instances or module paths to register.
    */
   plugins?: (HyperPlugin | string)[];
+
+  /**
+   * @ru Фабрики, создающие свежий экземпляр плагина для каждого ядра, включая extend() и create().
+   * Используйте вместо совместного использования экземпляров плагинов с состоянием.
+   * @en Factories creating a fresh plugin instance for each core, including extend() and create().
+   * Use these instead of sharing stateful plugin instances.
+   */
+  pluginFactories?: readonly CorePluginFactory[];
 
   /**
    * @ru Включить сбор метрик производительности.

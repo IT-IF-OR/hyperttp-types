@@ -1,3 +1,4 @@
+import type { HyperProtocolName } from "./protocol.js";
 import type { HyperTransport } from "./transport.js";
 
 /** A dynamically dispatched protocol method at the core/plugin boundary. */
@@ -22,7 +23,10 @@ export interface ProtocolMetadataMap {}
  * @ru Идентификатор протокола: ключи из ProtocolInputMap или любая кастомная строка.
  * @en Protocol identifier: either a known protocol key from ProtocolInputMap or any custom string.
  */
-export type SenderProtocol = keyof ProtocolInputMap | (string & {});
+/**
+ * @deprecated Use {@link HyperProtocolName} instead. This alias is kept for compatibility.
+ */
+export type SenderProtocol = HyperProtocolName;
 
 /**
  * @ru Вспомогательный тип для автоматического вывода структуры input по имени протокола.
@@ -41,6 +45,14 @@ export type InferProtocolInput<P extends string> = P extends keyof ProtocolInput
 export type InferProtocolMetadata<P extends string> = P extends keyof ProtocolMetadataMap
   ? ProtocolMetadataMap[P]
   : Record<string, unknown>;
+
+/**
+ * @ru Финальный результат логического запроса после всех блокирующих обработчиков ответа и восстановления.
+ * @en Final logical request outcome after all blocking response and recovery handlers.
+ */
+export type RequestOutcome =
+  | { readonly ok: true; readonly response: UniversalResponse }
+  | { readonly ok: false; readonly error: unknown };
 
 /**
  * @ru Контекст выполнения, передаваемый через весь жизненный цикл запроса (prepare → send → parse).
@@ -76,6 +88,24 @@ export interface RequestContext {
    * @en Arbitrary state shared between request lifecycle phases.
    */
   readonly state: Record<string, unknown>;
+
+  /**
+   * @ru Регистрирует callback, вызываемый один раз за логический запрос после всех блокирующих
+   * обработчиков ответа и восстановления. Регистрация во время или после финализации отклоняется.
+   * Ошибки callback служат только для диагностики и не могут изменить результат запроса.
+   * @en Registers a callback invoked once per logical request after all blocking response and
+   * recovery handlers. Registration during or after finalization is rejected.
+   * Callback errors are diagnostic only and cannot change the request outcome.
+   */
+  onSettled?(callback: (outcome: RequestOutcome) => void | Promise<void>): void;
+
+  /**
+   * @ru Принимает уже финализированный ответ для запроса-последователя без повторного выполнения
+   * блокирующих и фоновых преобразований ответа. Не выполняет сетевые операции.
+   * @en Accepts an already finalized response for a follower request, skipping duplicate blocking
+   * and background response transforms. Performs no network I/O.
+   */
+  acceptFinalResponse?<T>(response: UniversalResponse<T>): UniversalResponse<T>;
 }
 
 /**
@@ -121,7 +151,7 @@ export interface UniversalResponse<TOutput = unknown, TExtra = Record<string, un
    * @ru Идентификатор протокола, обработавшего запрос.
    * @en Protocol identifier that handled the request.
    */
-  readonly protocol: SenderProtocol;
+  readonly protocol: HyperProtocolName;
 
   /**
    * @ru Признак успешного выполнения, определяемый протоколом или сендером.
@@ -186,7 +216,7 @@ export interface HyperSender<
   TOutput = unknown,
   TPrepared = unknown,
   TRaw = unknown,
-  P extends SenderProtocol = SenderProtocol,
+  P extends HyperProtocolName = HyperProtocolName,
 > {
   /**
    * @ru Идентификатор протокола, который обслуживает сендер.
@@ -232,7 +262,7 @@ export interface HyperSender<
   ): UniversalResponse<TOutput> | Promise<UniversalResponse<TOutput>>;
 }
 
-export type AnyHyperSender<P extends SenderProtocol = SenderProtocol> = HyperSender<
+export type AnyHyperSender<P extends HyperProtocolName = HyperProtocolName> = HyperSender<
   any,
   any,
   any,
@@ -250,9 +280,7 @@ export interface SenderRegistry {
    * @en Registers a sender in the registry.
    * @param sender - The sender to register.
    */
-  register<P extends SenderProtocol>(
-    sender: HyperSender<unknown, unknown, unknown, unknown, P>,
-  ): void;
+  register<P extends HyperProtocolName>(sender: AnyHyperSender<P>): void;
 
   /**
    * @ru Возвращает сендер по идентификатору протокола.
@@ -260,9 +288,7 @@ export interface SenderRegistry {
    * @param protocol - The protocol identifier.
    * @returns The sender, or undefined if the protocol is not registered.
    */
-  get<P extends SenderProtocol>(
-    protocol: P,
-  ): HyperSender<unknown, unknown, unknown, unknown, P> | undefined;
+  get<P extends HyperProtocolName>(protocol: P): AnyHyperSender<P> | undefined;
 
   /**
    * @ru Проверяет, зарегистрирован ли протокол.
@@ -270,7 +296,7 @@ export interface SenderRegistry {
    * @param protocol - The protocol identifier.
    * @returns true if the protocol is registered.
    */
-  has(protocol: SenderProtocol): boolean;
+  has(protocol: HyperProtocolName): boolean;
 
   /**
    * @ru Количество зарегистрированных сендеров.
