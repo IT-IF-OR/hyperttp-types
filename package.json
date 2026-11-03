@@ -1,6 +1,6 @@
 {
   "name": "@hyperttp/types",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "keywords": [
     "hyperttp",
     "protocol-agnostic",

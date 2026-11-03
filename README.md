@@ -279,7 +279,7 @@ actual sender, receiver, and convenience method implementations.
 To activate an augmentation, import the protocol package or its augmentation entry point:
 
 ```ts
-import "@hyperttp/core/rest";
+import "@hyperttp/protocol-rest";
 ```
 
 ## Creating a protocol package
@@ -862,7 +862,7 @@ Server facade contracts live in `@hyperttp/types`: `ServerOptions`, `RouteParams
 
 REST route request/response types are inferred from `ProtocolServerRequestMap`
 and `ProtocolServerResponseMap`; import the REST implementation from
-`@hyperttp/core/rest` (or `hyperttp`) to load its augmentation. `types` does not
+`@hyperttp/protocol-rest` (or `hyperttp`) to load its augmentation. `types` does not
 import protocol implementations.
 
 For example, a signaling protocol can declare its server namespace:
