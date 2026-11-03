@@ -1,25 +1,25 @@
 {
   "name": "@hyperttp/types",
-  "version": "0.5.1",
-  "author": "dirold2",
+  "version": "0.5.2",
+  "keywords": [
+    "hyperttp",
+    "protocol-agnostic",
+    "types",
+    "typescript"
+  ],
   "license": "MIT",
+  "author": "dirold2",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IT-IF-OR/hyperttp-types.git"
+  },
   "type": "module",
   "sideEffects": false,
+  "types": "./index.d.ts",
   "exports": {
     ".": {
       "types": "./index.d.ts"
     }
   },
-  "types": "./index.d.ts",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/IT-IF-OR/hyperttp-types.git"
-  },
-  "keywords": [
-    "hyperttp",
-    "types",
-    "typescript",
-    "protocol-agnostic"
-  ],
   "private": true
 }
