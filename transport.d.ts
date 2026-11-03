@@ -72,10 +72,15 @@ export interface TransportResponse {
      */
     readonly body: unknown;
 }
+export interface TransportSignalingOptions {
+    readonly path: string;
+    readonly authorize?: (request: TransportRequest) => boolean | Promise<boolean>;
+}
 export interface TransportListenOptions {
     readonly host?: string;
     readonly port?: number;
     readonly signal?: AbortSignal;
+    readonly signaling?: TransportSignalingOptions;
     /**
      * @ru Колбэк доставки входящих запросов. Транспорт не знает о протоколах: это сырой ввод/вывод.
      * Ядро оборачивает ресивер в этот колбэк. Если колбэк не передан, входящие запросы отклоняются.

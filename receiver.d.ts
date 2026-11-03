@@ -1,5 +1,6 @@
 import type { HyperProtocolName } from "./protocol.js";
 import type { RequestContext } from "./sender.js";
+import type { TransportSignalingOptions } from "./transport.js";
 /**
  * @ru Контекст серверного запроса. Расширяет общий `RequestContext` информацией о соединении и пире.
  * @en Server request context. Extends the shared `RequestContext` with connection and peer information.
@@ -62,6 +63,7 @@ export interface HyperServerListenOptions<P extends HyperProtocolName = HyperPro
      * @en Abort signal to stop the server.
      */
     readonly signal?: AbortSignal;
+    readonly signaling?: TransportSignalingOptions;
     /**
      * @ru Application handler. Если передан, имеет приоритет над `HyperReceiver.handle`.
      * @en Application handler. If provided, it takes precedence over `HyperReceiver.handle`.
