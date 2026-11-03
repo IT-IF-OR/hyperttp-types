@@ -37,7 +37,7 @@ export interface ProtocolSignalOptions<P extends HyperProtocolName, Services> {
     readonly authorize?: (context: {
         readonly request: import("./transport.js").TransportRequest;
         readonly services: Services;
-    }) => boolean | Promise<boolean>;
+    }) => import("./transport.js").SignalingAuthorizationResult | Promise<import("./transport.js").SignalingAuthorizationResult>;
     readonly handler: ProtocolRouteHandler<P, Services>;
 }
 export interface ProtocolSignalMethods<P extends HyperProtocolName, Services, Server> {

@@ -72,9 +72,15 @@ export interface TransportResponse {
      */
     readonly body: unknown;
 }
+/** Trusted result produced by the application authorization callback, never by wire metadata. */
+export interface SignalingAuthorization {
+    readonly ownerId: string;
+    readonly context?: unknown;
+}
+export type SignalingAuthorizationResult = boolean | SignalingAuthorization;
 export interface TransportSignalingOptions {
     readonly path: string;
-    readonly authorize?: (request: TransportRequest) => boolean | Promise<boolean>;
+    readonly authorize?: (request: TransportRequest) => SignalingAuthorizationResult | Promise<SignalingAuthorizationResult>;
 }
 export interface TransportListenOptions {
     readonly host?: string;
