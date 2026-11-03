@@ -1,3 +1,4 @@
+import type { ProtocolServerFactory } from "./server.js";
 import type { HyperReceiver } from "./receiver.js";
 import type { HyperSender, ProtocolInputMap } from "./sender.js";
 
@@ -63,6 +64,9 @@ interface HyperProtocolIdentity<P extends HyperProtocolName> {
    * When omitted, the core falls back to `constructor.name` or the protocol identifier.
    */
   readonly name?: string;
+
+  /** Optional high-level server namespace factory, implemented by the protocol package. */
+  readonly server?: ProtocolServerFactory;
 }
 
 /**

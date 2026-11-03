@@ -12,7 +12,7 @@
 
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "rootDir": "./types",
+    "rootDir": "./types"
   },
-  "include": ["types"],
+  "include": ["types"]
 }
