@@ -1,42 +1,42 @@
 {
   "name": "@hyperttp/types",
-  "version": "0.5.0",
-  "author": "dirold2",
+  "version": "0.5.2",
+  "keywords": [
+    "hyperttp",
+    "protocol-agnostic",
+    "types",
+    "typescript"
+  ],
   "license": "MIT",
+  "author": "dirold2",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IT-IF-OR/hyperttp-types.git"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "sideEffects": false,
-  "files": ["dist"],
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts"
     }
   },
-  "types": "./dist/index.d.ts",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/IT-IF-OR/hyperttp-types.git"
-  },
-  "keywords": [
-    "hyperttp",
-    "types",
-    "typescript",
-    "protocol-agnostic"
-  ],
-  "devDependencies": {
-    "@dirold2/dev-tools": "^1.1.3",
-    "typescript": "^7.0.2",
-    "@types/node": "^26.6.6",
-    "oxlint": "^1.90.0",
-    "oxfmt": "^0.75.0"
-  },
   "scripts": {
-    "build": "tsc && d-build",
-    "dist": "d-dist",
-    "deploy": "npm run build && npm run dist",
-    "pub": "d-publish",
     "lint": "oxlint types",
     "lint:fix": "oxlint types --fix",
     "format": "oxfmt types",
-    "format:check": "oxfmt types --check"
+    "format:check": "oxfmt types --check",
+    "build": "node ../../scripts/build-package.ts",
+    "clean": "node --input-type=module -e 'import { rmSync } from \"node:fs\"; rmSync(\"dist\", { recursive: true, force: true });'",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "oxfmt": "^0.76.0",
+    "oxlint": "^1.90.0",
+    "typescript": "^7.0.2"
   }
 }

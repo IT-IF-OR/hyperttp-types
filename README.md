@@ -51,11 +51,7 @@ Protocol and transport packages should declare it as a peer dependency when appr
 `IHyperCore` exposes protocol-neutral dispatch and registry operations:
 
 ```ts
-import type {
-  IHyperCore,
-  SendRequest,
-  UniversalResponse,
-} from "@hyperttp/types";
+import type { IHyperCore, SendRequest, UniversalResponse } from "@hyperttp/types";
 
 async function request(core: IHyperCore) {
   const response: UniversalResponse = await core.send({
@@ -215,11 +211,7 @@ must check availability before using them.
 `HyperTransport` is deliberately protocol-neutral:
 
 ```ts
-import type {
-  HyperTransport,
-  TransportRequest,
-  TransportResponse,
-} from "@hyperttp/types";
+import type { HyperTransport, TransportRequest, TransportResponse } from "@hyperttp/types";
 
 const transport: HyperTransport = {
   async execute(request: TransportRequest): Promise<TransportResponse> {
@@ -334,25 +326,25 @@ All declarations below are re-exported from `@hyperttp/types`.
 
 `IHyperCore extends HyperProtocols` exposes:
 
-| Member | Type | Purpose |
-| --- | --- | --- |
-| `config` | `HyperClientOptions` | Immutable client configuration. |
+| Member                       | Type                                                                                 | Purpose                               |
+| ---------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------- |
+| `config`                     | `HyperClientOptions`                                                                 | Immutable client configuration.       |
 | `getProtocolName(protocol?)` | `<P extends HyperProtocolName = HyperProtocolName>(protocol?: P) => Promise<string>` | Resolve the registered protocol name. |
-| `getSenderName(protocol?)` | `<P extends HyperProtocolName = HyperProtocolName>(protocol?: P) => Promise<string>` | Resolve the sender name. |
-| `getReceiverName(protocol?)` | `<P extends HyperProtocolName = HyperProtocolName>(protocol?: P) => Promise<string>` | Resolve the receiver name. |
-| `getTransportName()` | `() => Promise<string>` | Resolve the transport name. |
-| `send(request)` | Typed overloads | Dispatch a protocol request. |
-| `getSender(protocol)` | `<P>(protocol: P) => AnyHyperSender<P> \| undefined` | Look up a sender. |
-| `registerSender(sender)` | `<P>(sender: AnyHyperSender<P>) => this` | Register a sender. |
-| `getReceiver(protocol)` | `<P>(protocol: P) => AnyHyperReceiver<P> \| undefined` | Look up a receiver. |
-| `registerReceiver(receiver)` | `<P>(receiver: AnyHyperReceiver<P>) => this` | Register a receiver. |
-| `getProtocol(protocol)` | `<P>(protocol: P) => AnyHyperProtocol<P> \| undefined` | Look up a protocol module. |
-| `registerProtocol(protocol)` | `<P>(protocol: AnyHyperProtocol<P>) => this` | Register a protocol module. |
-| `listen(options)` | `<P>(options: HyperServerListenOptions<P>) => Promise<TransportServer>` | Start a protocol server. |
-| `use(plugin)` | `(plugin: HyperPlugin) => this` | Register a plugin. |
-| `extend(options)` | `(options: Partial<HyperClientOptions>) => IHyperCore` | Create a client with merged options. |
-| `create(options)` | `(options: Partial<HyperClientOptions>) => IHyperCore` | Create a new client. |
-| `destroy(graceful?)` | `(graceful?: boolean) => Promise<void>` | Shut down the client. |
+| `getSenderName(protocol?)`   | `<P extends HyperProtocolName = HyperProtocolName>(protocol?: P) => Promise<string>` | Resolve the sender name.              |
+| `getReceiverName(protocol?)` | `<P extends HyperProtocolName = HyperProtocolName>(protocol?: P) => Promise<string>` | Resolve the receiver name.            |
+| `getTransportName()`         | `() => Promise<string>`                                                              | Resolve the transport name.           |
+| `send(request)`              | Typed overloads                                                                      | Dispatch a protocol request.          |
+| `getSender(protocol)`        | `<P>(protocol: P) => AnyHyperSender<P> \| undefined`                                 | Look up a sender.                     |
+| `registerSender(sender)`     | `<P>(sender: AnyHyperSender<P>) => this`                                             | Register a sender.                    |
+| `getReceiver(protocol)`      | `<P>(protocol: P) => AnyHyperReceiver<P> \| undefined`                               | Look up a receiver.                   |
+| `registerReceiver(receiver)` | `<P>(receiver: AnyHyperReceiver<P>) => this`                                         | Register a receiver.                  |
+| `getProtocol(protocol)`      | `<P>(protocol: P) => AnyHyperProtocol<P> \| undefined`                               | Look up a protocol module.            |
+| `registerProtocol(protocol)` | `<P>(protocol: AnyHyperProtocol<P>) => this`                                         | Register a protocol module.           |
+| `listen(options)`            | `<P>(options: HyperServerListenOptions<P>) => Promise<TransportServer>`              | Start a protocol server.              |
+| `use(plugin)`                | `(plugin: HyperPlugin) => this`                                                      | Register a plugin.                    |
+| `extend(options)`            | `(options: Partial<HyperClientOptions>) => IHyperCore`                               | Create a client with merged options.  |
+| `create(options)`            | `(options: Partial<HyperClientOptions>) => IHyperCore`                               | Create a new client.                  |
+| `destroy(graceful?)`         | `(graceful?: boolean) => Promise<void>`                                              | Shut down the client.                 |
 
 The primary `send()` overload is:
 
@@ -409,53 +401,53 @@ declare module "@hyperttp/types" {
 Utility types:
 
 ```ts
-type InferProtocolInput<P extends string> =
-  P extends keyof ProtocolInputMap ? ProtocolInputMap[P] : unknown;
+type InferProtocolInput<P extends string> = P extends keyof ProtocolInputMap
+  ? ProtocolInputMap[P]
+  : unknown;
 
-type InferProtocolMetadata<P extends string> =
-  P extends keyof ProtocolMetadataMap
-    ? ProtocolMetadataMap[P]
-    : Record<string, unknown>;
+type InferProtocolMetadata<P extends string> = P extends keyof ProtocolMetadataMap
+  ? ProtocolMetadataMap[P]
+  : Record<string, unknown>;
 ```
 
 #### `RequestContext`
 
 Shared request lifecycle context:
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `requestId` | `string` | Unique request identifier. |
-| `startTime` | `number` | Request start timestamp. |
-| `signal` | `AbortSignal \| undefined` | Cancellation signal. |
-| `meta` | `Record<string, unknown>` | Shared lifecycle metadata. |
-| `state` | `Record<string, unknown>` | Mutable state shared between phases. |
+| Property    | Type                       | Description                          |
+| ----------- | -------------------------- | ------------------------------------ |
+| `requestId` | `string`                   | Unique request identifier.           |
+| `startTime` | `number`                   | Request start timestamp.             |
+| `signal`    | `AbortSignal \| undefined` | Cancellation signal.                 |
+| `meta`      | `Record<string, unknown>`  | Shared lifecycle metadata.           |
+| `state`     | `Record<string, unknown>`  | Mutable state shared between phases. |
 
 #### `SendRequest<TInput, P>`
 
 Universal request envelope:
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `protocol` | `P` | Protocol identifier. |
-| `input` | `TInput` or `InferProtocolInput<P>` | Protocol-specific input. |
-| `signal` | `AbortSignal \| undefined` | Optional cancellation signal. |
-| `metadata` | `Readonly<InferProtocolMetadata<P>> \| undefined` | Protocol metadata. |
+| Property   | Type                                              | Description                   |
+| ---------- | ------------------------------------------------- | ----------------------------- |
+| `protocol` | `P`                                               | Protocol identifier.          |
+| `input`    | `TInput` or `InferProtocolInput<P>`               | Protocol-specific input.      |
+| `signal`   | `AbortSignal \| undefined`                        | Optional cancellation signal. |
+| `metadata` | `Readonly<InferProtocolMetadata<P>> \| undefined` | Protocol metadata.            |
 
 #### `UniversalResponse<TOutput, TExtra>`
 
 Normalized protocol-neutral response:
 
-| Property | Type | Description |
-| --- | --- | --- |
-| `protocol` | `HyperProtocolName` | Protocol that handled the request. |
-| `ok` | `boolean` | Protocol-defined success flag. |
-| `status` | `number` | Numeric status. |
-| `statusText` | `string \| undefined` | Status description. |
-| `headers` | `Readonly<Record<string, string \| string[]>>` | Normalized response headers. |
-| `url` | `string \| undefined` | Final response URL. |
-| `data` | `TOutput` | Normalized response data. |
-| `metadata` | `Readonly<TExtra> \| undefined` | Additional response metadata. |
-| `raw` | `unknown \| undefined` | Raw response before normalization. |
+| Property     | Type                                           | Description                        |
+| ------------ | ---------------------------------------------- | ---------------------------------- |
+| `protocol`   | `HyperProtocolName`                            | Protocol that handled the request. |
+| `ok`         | `boolean`                                      | Protocol-defined success flag.     |
+| `status`     | `number`                                       | Numeric status.                    |
+| `statusText` | `string \| undefined`                          | Status description.                |
+| `headers`    | `Readonly<Record<string, string \| string[]>>` | Normalized response headers.       |
+| `url`        | `string \| undefined`                          | Final response URL.                |
+| `data`       | `TOutput`                                      | Normalized response data.          |
+| `metadata`   | `Readonly<TExtra> \| undefined`                | Additional response metadata.      |
+| `raw`        | `unknown \| undefined`                         | Raw response before normalization. |
 
 #### `HyperMethod` and `HyperMethodSurface`
 
@@ -471,19 +463,24 @@ packages should provide the precise method signatures for their own APIs.
 
 A sender has the following members:
 
-| Member | Type | Description |
-| --- | --- | --- |
-| `protocol` | `P` | Protocol served by the sender. |
-| `methods` | `HyperMethodSurface \| undefined` | Optional convenience-method surface. |
-| `prepare` | `(request: SendRequest<TInput, P>, ctx: RequestContext) => TPrepared` | Prepare the request. |
-| `send` | `(prepared: TPrepared, transport: HyperTransport, ctx: RequestContext) => Promise<TRaw>` | Execute through a transport. |
-| `parse` | `(raw: TRaw, ctx: RequestContext) => UniversalResponse<TOutput> \| Promise<UniversalResponse<TOutput>>` | Normalize the raw response. |
+| Member     | Type                                                                                                    | Description                          |
+| ---------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------ |
+| `protocol` | `P`                                                                                                     | Protocol served by the sender.       |
+| `methods`  | `HyperMethodSurface \| undefined`                                                                       | Optional convenience-method surface. |
+| `prepare`  | `(request: SendRequest<TInput, P>, ctx: RequestContext) => TPrepared`                                   | Prepare the request.                 |
+| `send`     | `(prepared: TPrepared, transport: HyperTransport, ctx: RequestContext) => Promise<TRaw>`                | Execute through a transport.         |
+| `parse`    | `(raw: TRaw, ctx: RequestContext) => UniversalResponse<TOutput> \| Promise<UniversalResponse<TOutput>>` | Normalize the raw response.          |
 
 #### `AnyHyperSender<P>`
 
 ```ts
-type AnyHyperSender<P extends HyperProtocolName = HyperProtocolName> =
-  HyperSender<any, any, any, any, P>;
+type AnyHyperSender<P extends HyperProtocolName = HyperProtocolName> = HyperSender<
+  any,
+  any,
+  any,
+  any,
+  P
+>;
 ```
 
 Use this compatibility alias at registration and configuration boundaries when the sender has
@@ -509,52 +506,55 @@ interface SenderRegistry {
 Their utility types resolve known entries or fall back to `unknown`:
 
 ```ts
-type InferProtocolServerRequest<P extends string> =
-  P extends keyof ProtocolServerRequestMap
-    ? ProtocolServerRequestMap[P]
-    : unknown;
+type InferProtocolServerRequest<P extends string> = P extends keyof ProtocolServerRequestMap
+  ? ProtocolServerRequestMap[P]
+  : unknown;
 
-type InferProtocolServerResponse<P extends string> =
-  P extends keyof ProtocolServerResponseMap
-    ? ProtocolServerResponseMap[P]
-    : unknown;
+type InferProtocolServerResponse<P extends string> = P extends keyof ProtocolServerResponseMap
+  ? ProtocolServerResponseMap[P]
+  : unknown;
 ```
 
 #### `ServerRequestContext`
 
 Extends `RequestContext` with transport-dependent server information:
 
-| Property | Type |
-| --- | --- |
+| Property     | Type                                             |
+| ------------ | ------------------------------------------------ |
 | `connection` | `Readonly<Record<string, unknown>> \| undefined` |
-| `peer` | `Readonly<Record<string, unknown>> \| undefined` |
+| `peer`       | `Readonly<Record<string, unknown>> \| undefined` |
 
 #### `HyperServerListenOptions<P, TRequest, TResponse>`
 
-| Property | Type |
-| --- | --- |
-| `protocol` | `P` |
-| `host` | `string \| undefined` |
-| `port` | `number \| undefined` |
-| `signal` | `AbortSignal \| undefined` |
-| `handler` | `(request: TRequest, ctx: ServerRequestContext) => TResponse \| Promise<TResponse> \| undefined` |
+| Property   | Type                                                                                             |
+| ---------- | ------------------------------------------------------------------------------------------------ |
+| `protocol` | `P`                                                                                              |
+| `host`     | `string \| undefined`                                                                            |
+| `port`     | `number \| undefined`                                                                            |
+| `signal`   | `AbortSignal \| undefined`                                                                       |
+| `handler`  | `(request: TRequest, ctx: ServerRequestContext) => TResponse \| Promise<TResponse> \| undefined` |
 
 `TRequest` and `TResponse` default to the corresponding server protocol map entries.
 
 #### `HyperReceiver<TRequest, TResponse, TRawRequest, TRawResponse, P>`
 
-| Member | Type | Description |
-| --- | --- | --- |
-| `protocol` | `P` | Protocol served by the receiver. |
-| `receive` | `(request: TRawRequest, ctx: ServerRequestContext) => TRequest \| Promise<TRequest>` | Parse raw transport input. |
-| `handle` | `(request: TRequest, ctx: ServerRequestContext) => TResponse \| Promise<TResponse>` | Run application logic. |
-| `respond` | `(response: TResponse, ctx: ServerRequestContext) => TRawResponse \| Promise<TRawResponse>` | Serialize the protocol response. |
+| Member     | Type                                                                                        | Description                      |
+| ---------- | ------------------------------------------------------------------------------------------- | -------------------------------- |
+| `protocol` | `P`                                                                                         | Protocol served by the receiver. |
+| `receive`  | `(request: TRawRequest, ctx: ServerRequestContext) => TRequest \| Promise<TRequest>`        | Parse raw transport input.       |
+| `handle`   | `(request: TRequest, ctx: ServerRequestContext) => TResponse \| Promise<TResponse>`         | Run application logic.           |
+| `respond`  | `(response: TResponse, ctx: ServerRequestContext) => TRawResponse \| Promise<TRawResponse>` | Serialize the protocol response. |
 
 #### `AnyHyperReceiver<P>`
 
 ```ts
-type AnyHyperReceiver<P extends HyperProtocolName = HyperProtocolName> =
-  HyperReceiver<any, any, any, any, P>;
+type AnyHyperReceiver<P extends HyperProtocolName = HyperProtocolName> = HyperReceiver<
+  any,
+  any,
+  any,
+  any,
+  P
+>;
 ```
 
 `IHyperCore.registerReceiver()` and `BaseHyperClientOptions.receivers` use this alias to accept
@@ -592,8 +592,13 @@ modules containing fully typed components remain assignable at registration boun
 #### `AnyHyperProtocol<P>`
 
 ```ts
-type AnyHyperProtocol<P extends HyperProtocolName = HyperProtocolName> =
-  HyperProtocol<any, any, any, any, P>;
+type AnyHyperProtocol<P extends HyperProtocolName = HyperProtocolName> = HyperProtocol<
+  any,
+  any,
+  any,
+  any,
+  P
+>;
 ```
 
 This compatibility alias is used by `IHyperCore` registration and lookup methods,
@@ -610,19 +615,19 @@ type LogLevel = "debug" | "info" | "warn" | "error";
 
 #### `BaseHyperClientOptions` / `HyperClientOptions`
 
-| Option | Type | Description |
-| --- | --- | --- |
-| `protocols` | `AnyHyperProtocol[] \| undefined` | Protocol modules to register. |
-| `senders` | `AnyHyperSender[] \| undefined` | Senders to register. |
-| `receivers` | `AnyHyperReceiver[] \| undefined` | Receivers to register. |
-| `customTransport` | `HyperTransport \| undefined` | Custom low-level transport. |
-| `customSender` | `AnyHyperSender \| undefined` | Custom sender. |
-| `retry` | `Partial<RetryOptions> \| undefined` | Retry configuration overrides. |
-| `logger` | `(level: LogLevel, message: string, meta?: unknown) => void` | Custom logger. |
-| `verbose` | `boolean \| undefined` | Enable verbose logging. |
-| `pluginDirs` | `string[] \| undefined` | Plugin directories. |
-| `plugins` | `(HyperPlugin \| string)[] \| undefined` | Plugin instances or module paths. |
-| `trackMetrics` | `boolean \| undefined` | Enable metrics collection. |
+| Option            | Type                                                         | Description                       |
+| ----------------- | ------------------------------------------------------------ | --------------------------------- |
+| `protocols`       | `AnyHyperProtocol[] \| undefined`                            | Protocol modules to register.     |
+| `senders`         | `AnyHyperSender[] \| undefined`                              | Senders to register.              |
+| `receivers`       | `AnyHyperReceiver[] \| undefined`                            | Receivers to register.            |
+| `customTransport` | `HyperTransport \| undefined`                                | Custom low-level transport.       |
+| `customSender`    | `AnyHyperSender \| undefined`                                | Custom sender.                    |
+| `retry`           | `Partial<RetryOptions> \| undefined`                         | Retry configuration overrides.    |
+| `logger`          | `(level: LogLevel, message: string, meta?: unknown) => void` | Custom logger.                    |
+| `verbose`         | `boolean \| undefined`                                       | Enable verbose logging.           |
+| `pluginDirs`      | `string[] \| undefined`                                      | Plugin directories.               |
+| `plugins`         | `(HyperPlugin \| string)[] \| undefined`                     | Plugin instances or module paths. |
+| `trackMetrics`    | `boolean \| undefined`                                       | Enable metrics collection.        |
 
 `HyperClientOptions` currently extends `BaseHyperClientOptions` and is an augmentation point for
 protocol-specific configuration.
@@ -656,22 +661,20 @@ protocol bound by `listen()`, rather than a property inferred from raw transport
 
 ```ts
 type PluginOnRequestResult<TInput = unknown, TOutput = unknown> =
-  | UniversalResponse<TOutput>
-  | SendRequest<TInput>
-  | void;
+  UniversalResponse<TOutput> | SendRequest<TInput> | void;
 ```
 
 #### `HyperPlugin<TInput, TOutput>`
 
 A plugin has `name`, optional `phase` and `mode`, and optional hooks:
 
-| Hook | Signature |
-| --- | --- |
-| `enabled` | `(config: HyperClientOptions) => boolean` |
-| `setup` | `(ctx: PluginContext) => void` |
-| `onRequest` | `(req, ctx?, reqCtx?) => Promise<PluginOnRequestResult<TInput, TOutput>> \| PluginOnRequestResult<TInput, TOutput>` |
-| `onResponse` | `(res, req?, ctx?, reqCtx?) => Promise<UniversalResponse<TOutput> \| void> \| UniversalResponse<TOutput> \| void` |
-| `onError` | `(err, req?, ctx?, reqCtx?) => Promise<UniversalResponse<TOutput> \| void> \| UniversalResponse<TOutput> \| void` |
+| Hook         | Signature                                                                                                           |
+| ------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `enabled`    | `(config: HyperClientOptions) => boolean`                                                                           |
+| `setup`      | `(ctx: PluginContext) => void`                                                                                      |
+| `onRequest`  | `(req, ctx?, reqCtx?) => Promise<PluginOnRequestResult<TInput, TOutput>> \| PluginOnRequestResult<TInput, TOutput>` |
+| `onResponse` | `(res, req?, ctx?, reqCtx?) => Promise<UniversalResponse<TOutput> \| void> \| UniversalResponse<TOutput> \| void`   |
+| `onError`    | `(err, req?, ctx?, reqCtx?) => Promise<UniversalResponse<TOutput> \| void> \| UniversalResponse<TOutput> \| void`   |
 
 `reqCtx` is the per-request `RequestContext`, allowing plugins to share `state` and `meta`
 across lifecycle phases.
@@ -694,12 +697,12 @@ type ServerRequestOutcome =
 `HyperPlugin` also provides these optional server hooks. All arguments are required when
 invoking a hook; `MaybePromise<T>` below means `T | Promise<T>` (an internal type alias).
 
-| Hook | Signature |
-| --- | --- |
-| `onServerRequest` | `(request: TransportRequest, ctx: PluginContext, requestCtx: ServerPluginContext) => MaybePromise<TransportRequest \| void>` |
+| Hook               | Signature                                                                                                                                                  |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `onServerRequest`  | `(request: TransportRequest, ctx: PluginContext, requestCtx: ServerPluginContext) => MaybePromise<TransportRequest \| void>`                               |
 | `onServerResponse` | `(response: TransportResponse, request: TransportRequest, ctx: PluginContext, requestCtx: ServerPluginContext) => MaybePromise<TransportResponse \| void>` |
-| `onServerError` | `(error: unknown, request: TransportRequest, ctx: PluginContext, requestCtx: ServerPluginContext) => MaybePromise<TransportResponse \| void>` |
-| `onServerSettled` | `(outcome: ServerRequestOutcome, request: TransportRequest, ctx: PluginContext, requestCtx: ServerPluginContext) => MaybePromise<void>` |
+| `onServerError`    | `(error: unknown, request: TransportRequest, ctx: PluginContext, requestCtx: ServerPluginContext) => MaybePromise<TransportResponse \| void>`              |
+| `onServerSettled`  | `(outcome: ServerRequestOutcome, request: TransportRequest, ctx: PluginContext, requestCtx: ServerPluginContext) => MaybePromise<void>`                    |
 
 - Server hooks are always awaited/blocking, independently of the plugin's client `mode`.
   Every server hook runs in forward phase order:
@@ -720,26 +723,26 @@ invoking a hook; `MaybePromise<T>` below means `T | Promise<T>` (an internal typ
 
 #### `RetryOptions`
 
-| Option | Type |
-| --- | --- |
-| `maxRetries` | `number \| undefined` |
-| `baseDelay` | `number \| undefined` |
-| `maxDelay` | `number \| undefined` |
-| `jitter` | `boolean \| undefined` |
+| Option       | Type                   |
+| ------------ | ---------------------- |
+| `maxRetries` | `number \| undefined`  |
+| `baseDelay`  | `number \| undefined`  |
+| `maxDelay`   | `number \| undefined`  |
+| `jitter`     | `boolean \| undefined` |
 
 #### `HyperttpError<TReq, TRes>`
 
 Extends `Error` with:
 
-| Property | Type |
-| --- | --- |
-| `code` | `string` |
-| `cause` | `unknown \| undefined` |
-| `request` | `TReq \| undefined` |
-| `response` | `TRes \| undefined` |
-| `status` | `number \| undefined` |
-| `statusCode` | `number \| undefined` |
-| `meta` | `{ retryCount: number; isRetryable: boolean; duration?: number; timings?: { start: number; end?: number } } \| undefined` |
+| Property     | Type                                                                                                                      |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------- |
+| `code`       | `string`                                                                                                                  |
+| `cause`      | `unknown \| undefined`                                                                                                    |
+| `request`    | `TReq \| undefined`                                                                                                       |
+| `response`   | `TRes \| undefined`                                                                                                       |
+| `status`     | `number \| undefined`                                                                                                     |
+| `statusCode` | `number \| undefined`                                                                                                     |
+| `meta`       | `{ retryCount: number; isRetryable: boolean; duration?: number; timings?: { start: number; end?: number } } \| undefined` |
 
 ### Metrics
 
@@ -779,38 +782,38 @@ Adapters translate `IHyperCore` into a third-party client shape such as Axios, K
 
 #### `TransportRequest`
 
-| Property | Type |
-| --- | --- |
-| `method` | `string` |
-| `url` | `string` |
-| `headers` | `Readonly<Record<string, string \| string[]>>` |
-| `body` | `unknown \| undefined` |
-| `signal` | `AbortSignal \| undefined` |
-| `protocol` | `HyperProtocolName` |
-| `stream` | `boolean \| undefined` |
-| `followRedirects` | `boolean \| undefined` |
-| `maxRedirects` | `number \| undefined` |
+| Property          | Type                                           |
+| ----------------- | ---------------------------------------------- |
+| `method`          | `string`                                       |
+| `url`             | `string`                                       |
+| `headers`         | `Readonly<Record<string, string \| string[]>>` |
+| `body`            | `unknown \| undefined`                         |
+| `signal`          | `AbortSignal \| undefined`                     |
+| `protocol`        | `HyperProtocolName`                            |
+| `stream`          | `boolean \| undefined`                         |
+| `followRedirects` | `boolean \| undefined`                         |
+| `maxRedirects`    | `number \| undefined`                          |
 
 Headers are already normalized at this layer. Protocol packages may accept more flexible
 header input and normalize it before creating a `TransportRequest`.
 
 #### `TransportResponse`
 
-| Property | Type |
-| --- | --- |
-| `status` | `number` |
-| `statusText` | `string \| undefined` |
-| `headers` | `Readonly<Record<string, string \| string[]>>` |
-| `url` | `string \| undefined` |
-| `body` | `unknown` |
+| Property     | Type                                           |
+| ------------ | ---------------------------------------------- |
+| `status`     | `number`                                       |
+| `statusText` | `string \| undefined`                          |
+| `headers`    | `Readonly<Record<string, string \| string[]>>` |
+| `url`        | `string \| undefined`                          |
+| `body`       | `unknown`                                      |
 
 #### `TransportListenOptions`
 
-| Property | Type |
-| --- | --- |
-| `host` | `string \| undefined` |
-| `port` | `number \| undefined` |
-| `signal` | `AbortSignal \| undefined` |
+| Property    | Type                                                                                          |
+| ----------- | --------------------------------------------------------------------------------------------- |
+| `host`      | `string \| undefined`                                                                         |
+| `port`      | `number \| undefined`                                                                         |
+| `signal`    | `AbortSignal \| undefined`                                                                    |
 | `onRequest` | `(request: TransportRequest) => Promise<TransportResponse> \| TransportResponse \| undefined` |
 
 `onError` is intentionally not part of this universal contract; transport-specific error
@@ -826,14 +829,14 @@ interface TransportServer {
 
 #### `HyperTransport`
 
-| Member | Type |
-| --- | --- |
-| `protocols` | `readonly HyperProtocolName[] \| undefined` |
-| `supports` | `(protocol: HyperProtocolName) => boolean` (optional) |
-| `execute` | `(request: TransportRequest) => Promise<TransportResponse>` |
-| `listen` | `(options: TransportListenOptions) => Promise<TransportServer>` (optional) |
-| `close` | `() => Promise<void> \| void` (optional) |
-| `destroy` | `() => Promise<void> \| void` (optional) |
+| Member      | Type                                                                       |
+| ----------- | -------------------------------------------------------------------------- |
+| `protocols` | `readonly HyperProtocolName[] \| undefined`                                |
+| `supports`  | `(protocol: HyperProtocolName) => boolean` (optional)                      |
+| `execute`   | `(request: TransportRequest) => Promise<TransportResponse>`                |
+| `listen`    | `(options: TransportListenOptions) => Promise<TransportServer>` (optional) |
+| `close`     | `() => Promise<void> \| void` (optional)                                   |
+| `destroy`   | `() => Promise<void> \| void` (optional)                                   |
 
 ## Development
 
@@ -849,3 +852,31 @@ The package publishes generated declaration files from `dist/` and contains no r
 ## License
 
 MIT
+
+## High-level server contracts
+
+Server facade contracts live in `@hyperttp/types`: `ServerOptions`, `RouteParams`,
+`RouteContext`, `RouteHandler`, `ServerMiddleware`, `ProtocolRouteContext`,
+`ProtocolRouteHandler`, `ProtocolSignalOptions`, `ProtocolSignalMethods`,
+`ProtocolServerHost`, `ProtocolServerFactory` and `HyperServerProtocols`.
+
+REST route request/response types are inferred from `ProtocolServerRequestMap`
+and `ProtocolServerResponseMap`; import the REST implementation from
+`@hyperttp/core/rest` (or `hyperttp`) to load its augmentation. `types` does not
+import protocol implementations.
+
+For example, a signaling protocol can declare its server namespace:
+
+```ts
+import type { ProtocolSignalMethods } from "@hyperttp/types";
+
+declare module "@hyperttp/types" {
+  interface HyperServerProtocols<_Services, _Server> {
+    readonly custom: ProtocolSignalMethods<"custom", _Services, _Server>;
+  }
+}
+```
+
+Register the protocol's request/response maps and supply a `server` factory on
+the protocol module for runtime behavior. Protocol-specific names such as
+`WebRtcRouteContext` remain convenience aliases in their owning protocol package.
