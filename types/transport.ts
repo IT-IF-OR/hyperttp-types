@@ -87,10 +87,25 @@ export interface TransportResponse {
   readonly body: unknown;
 }
 
+/** Trusted result produced by the application authorization callback, never by wire metadata. */
+export interface SignalingAuthorization {
+  readonly ownerId: string;
+  readonly context?: unknown;
+}
+export type SignalingAuthorizationResult = boolean | SignalingAuthorization;
+
+export interface TransportSignalingOptions {
+  readonly path: string;
+  readonly authorize?: (
+    request: TransportRequest,
+  ) => SignalingAuthorizationResult | Promise<SignalingAuthorizationResult>;
+}
+
 export interface TransportListenOptions {
   readonly host?: string;
   readonly port?: number;
   readonly signal?: AbortSignal;
+  readonly signaling?: TransportSignalingOptions;
 
   /**
    * @ru Колбэк доставки входящих запросов. Транспорт не знает о протоколах: это сырой ввод/вывод.
