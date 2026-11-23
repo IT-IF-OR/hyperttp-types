@@ -178,6 +178,12 @@ export interface UniversalResponse<TOutput = unknown, TExtra = Record<string, un
   readonly headers: Readonly<Record<string, string | string[]>>;
 
   /**
+   * @ru Завершающие заголовки (HTTP/2 trailers), если протокол их использует.
+   * @en Trailing headers (HTTP/2 trailers) when the protocol uses them.
+   */
+  readonly trailers?: Readonly<Record<string, string | string[]>>;
+
+  /**
    * @ru Финальный URL ответа (после редиректов, если были).
    * @en Final response URL (after redirects, if any).
    */

@@ -19,11 +19,25 @@ export type ProtocolRouteHandler<P extends HyperProtocolName, Services> = (
   context: ProtocolRouteContext<P, Services>,
 ) => InferProtocolServerResponse<P> | Promise<InferProtocolServerResponse<P>>;
 
-/** A facade configures a listener; ownership and lifecycle stay with the host. */
+export type RestRouteMethod =
+  | "GET"
+  | "POST"
+  | "PUT"
+  | "DELETE"
+  | "PATCH"
+  | "HEAD"
+  | "OPTIONS"
+  | "QUERY";
+
 export interface ProtocolServerHost<Services, Server> {
   readonly services: Services;
   configure<P extends HyperProtocolName>(
     options: Omit<HyperServerListenOptions<P>, "port" | "host" | "signal">,
+  ): Server;
+  registerRestRoutes<P extends string>(
+    methods: readonly RestRouteMethod[],
+    path: P,
+    handler: RouteHandler<Services, P>,
   ): Server;
 }
 

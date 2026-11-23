@@ -1,6 +1,6 @@
 import type { HyperProtocolName } from "./protocol.js";
 import type { RequestContext } from "./sender.js";
-import type { TransportSignalingOptions } from "./transport.js";
+import type { TransportRequest, TransportSignalingOptions } from "./transport.js";
 
 /**
  * @ru Контекст серверного запроса. Расширяет общий `RequestContext` информацией о соединении и пире.
@@ -31,6 +31,12 @@ export type InferProtocolServerResponse<P extends string> =
 
 export interface ServerRequestContext extends RequestContext {
   /**
+   * @ru Протокол, выбранный для текущего запроса.
+   * @en Protocol selected for the current request.
+   */
+  readonly protocol?: HyperProtocolName;
+
+  /**
    * @ru Информация о входящем соединении (зависит от транспорта).
    * @en Incoming connection information (transport-specific).
    */
@@ -57,9 +63,27 @@ export interface HyperServerListenOptions<
 > {
   /**
    * @ru Идентификатор протокола, который будет обслуживать сервер (например, 'rest', 'grpc').
+   * Для мультипротокольного сервера используйте `protocols`.
    * @en Protocol identifier the server will serve (e.g. 'rest', 'grpc').
+   * Use `protocols` for a multi-protocol server.
    */
-  readonly protocol: P;
+  readonly protocol?: P;
+
+  /**
+   * @ru Набор протоколов, обслуживаемых одним listener-ом. Ядро запускает транспорт
+   * один раз и маршрутизирует каждый запрос к нужному receiver.
+   * @en Set of protocols served by one listener. The core starts the transport once
+   * and routes each request to the matching receiver.
+   */
+  readonly protocols?: readonly P[];
+
+  /**
+   * @ru Необязательный маршрутизатор запроса к протоколу. Если не задан, ядро
+   * использует подсказку транспорта и `content-type` (например, `application/grpc`).
+   * @en Optional request-to-protocol router. When omitted, the core uses the
+   * transport hint and `content-type` (e.g. `application/grpc`).
+   */
+  readonly route?: (request: TransportRequest) => P | undefined;
 
   /**
    * @ru Адрес интерфейса для прослушивания.

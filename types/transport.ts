@@ -75,6 +75,12 @@ export interface TransportResponse {
   readonly headers: Readonly<Record<string, string | string[]>>;
 
   /**
+   * @ru Завершающие заголовки (HTTP/2 trailers), например `grpc-status` и `grpc-message`.
+   * @en Trailing headers (HTTP/2 trailers), e.g. `grpc-status` and `grpc-message`.
+   */
+  readonly trailers?: Readonly<Record<string, string | string[]>>;
+
+  /**
    * @ru Финальный URL ответа.
    * @en Final response URL.
    */
