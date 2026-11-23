@@ -31,7 +31,7 @@
     "format:check": "oxfmt types --check",
     "pub": "d-publish",
     "dist": "d-dist",
-    "build": "bun run clean && tsc",
+    "build": "d-build bun run clean && tsc",
     "clean": "node --input-type=module -e 'import { rmSync } from \"node:fs\"; rmSync(\"dist\", { recursive: true, force: true });'",
     "typecheck": "tsc --noEmit"
   },
